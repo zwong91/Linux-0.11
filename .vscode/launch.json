@@ -1,0 +1,25 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "(gdb) Linux-0.11",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/tools/system",
+            "miDebuggerServerAddress": "127.0.0.1:1234",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "setupCommands": [ 
+                { 
+                    "text": "set arch i386:x86-64", 
+                    "description": "run target", 
+                    "ignoreFailures": false 
+                }
+            ]
+        }
+    ]
+}

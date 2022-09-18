@@ -1,0 +1,12 @@
+Thumbs.db
+*.log
+*.bak
+.DS_Store
+*.o
+*.a
+*.img
+bootsect
+setup
+system
+Image
+System.map
