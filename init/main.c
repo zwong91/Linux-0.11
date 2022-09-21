@@ -103,13 +103,14 @@ static long main_memory_start = 0;
 
 struct drive_info { char dummy[32]; } drive_info;
 
+// 操作系统就是个中断驱动的死循环
 void main(void)		/* This really IS void, no error here. */
 {			/* The startup routine assumes (well, ...) this */
 /*
  * Interrupts are still disabled. Do necessary setups, then
  * enable them
  */
-
+	//1. 初始化环境
  	ROOT_DEV = ORIG_ROOT_DEV;
  	drive_info = DRIVE_INFO;
 	memory_end = (1<<20) + (EXT_MEM_K<<10);
@@ -136,11 +137,12 @@ void main(void)		/* This really IS void, no error here. */
 	buffer_init(buffer_memory_end);
 	hd_init();
 	floppy_init();
+	//2. 切换用户态
 	sti();
 	move_to_user_mode();
-	// main本身 化身为进程0执行, 继续使用0x10:user_stack[1k] 堆栈作为用户态堆栈, 内核态堆栈则是模拟中断iretd手动设置0x17:user_stack[1k] 0-640KB
+	//3. main本身 化身为进程0执行, 继续使用0x10:user_stack[1k] 堆栈作为用户态堆栈, 内核态堆栈则是模拟中断iretd手动设置0x17:user_stack[1k] 0-640KB
 	if (!fork()) {		/* we count on this going ok */
-		// 进程1 的使用自己的堆栈, 包括用户态堆栈和内核态堆栈
+		//4. 进程1 的使用自己的堆栈, 包括用户态堆栈和内核态堆栈
 		init();
 	}
 /*
@@ -181,6 +183,7 @@ void init(void)
 	printf("%d buffers = %d bytes buffer space\n\r",NR_BUFFERS,
 		NR_BUFFERS*BLOCK_SIZE);
 	printf("Free mem: %d bytes\n\r",memory_end-main_memory_start);
+	// 一个以 rc 为标准输入的 shell, 普通文件作为输入读取后shell退出
 	if (!(pid=fork())) {
 		close(0);
 		if (open("/etc/rc",O_RDONLY,0))
@@ -188,10 +191,12 @@ void init(void)
 		execve("/bin/sh",argv_rc,envp_rc);
 		_exit(2);
 	}
+	// 等待这个 shell 结束
 	if (pid>0)
 		while (pid != wait(&i))
 			/* nothing */;
 	while (1) {
+		// 一个以 tty0 终端为标准输入的 shell
 		if ((pid=fork())<0) {
 			printf("Fork failed in init\r\n");
 			continue;
@@ -204,6 +209,7 @@ void init(void)
 			(void) dup(0);
 			_exit(execve("/bin/sh",argv,envp));
 		}
+		// 这个 shell 退出了继续进大的死循环
 		while (1)
 			if (pid == wait(&i))
 				break;
