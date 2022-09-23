@@ -1,6 +1,6 @@
 0. download bochs 2.6
 
-search it in www.mirrorservice.org and download it here, and then decompress
+search it in https://zhuanlan.zhihu.com/p/466399365 and download it here, and then decompress
 it.
 
 1. compile me with gdbstub support:

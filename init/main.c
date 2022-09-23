@@ -20,6 +20,9 @@
  * won't be any messing with the stack from main(), but we define
  * some others too.
  */
+// 进程0在创建首个新进程1之前要求不要使用其用户态堆栈即fork不能以函数的形式调用
+// 以inline内联的方式, 新进程用户态栈中没有进程0的多余信息
+// 这里系统调用使用的是进程内核态栈, 而且每个进程都有独立的内核态栈
 static inline fork(void) __attribute__((always_inline));
 static inline pause(void) __attribute__((always_inline));
 static inline _syscall0(int,fork)
@@ -140,9 +143,9 @@ void main(void)		/* This really IS void, no error here. */
 	//2. 切换用户态
 	sti();
 	move_to_user_mode();
-	//3. main本身 化身为进程0执行, 继续使用0x10:user_stack[1k] 堆栈作为用户态堆栈, 内核态堆栈则是模拟中断iretd手动设置0x17:user_stack[1k] 0-640KB
+	//3. main本身 化身为idle进程0 执行, 继续使用0x10:user_stack[1k] 堆栈作为用户态堆栈, 内核态堆栈则是模拟中断iretd手动设置0x17:user_stack[1k] 0-640KB
 	if (!fork()) {		/* we count on this going ok */
-		//4. 进程1 的使用自己的堆栈, 包括用户态堆栈和内核态堆栈
+		//4. init进程1 的使用自己的堆栈, 包括用户态堆栈和内核态堆栈
 		init();
 	}
 /*
@@ -184,11 +187,12 @@ void init(void)
 		NR_BUFFERS*BLOCK_SIZE);
 	printf("Free mem: %d bytes\n\r",memory_end-main_memory_start);
 	// 一个以 rc 为标准输入的 shell, 普通文件作为输入读取后shell退出
+	// 以非交互式的方式, 执行/etc/rc文件中的命令如登录, 执行完毕, 进程退出
 	if (!(pid=fork())) {
 		close(0);
 		if (open("/etc/rc",O_RDONLY,0))
 			_exit(1);
-		execve("/bin/sh",argv_rc,envp_rc);
+		execve("/bin/sh",argv_rc,envp_rc);  // 进程2蜕变为shell
 		_exit(2);
 	}
 	// 等待这个 shell 结束

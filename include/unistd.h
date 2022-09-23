@@ -132,6 +132,11 @@
 #define __NR_iam		72
 #define __NR_whoami		73
 
+/*
+// 调用系统中断0x80
+//"=a" 输出 返回值eax = _res
+//"0"  输入 系统中断号
+*/
 #define _syscall0(type,name) \
   type name(void) \
 { \
