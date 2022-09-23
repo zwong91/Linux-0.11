@@ -1,17 +1,17 @@
-0. download bochs 2.3
+0. download bochs 2.6
 
 search it in www.mirrorservice.org and download it here, and then decompress
 it.
 
 1. compile me with gdbstub support:
 
-$ cd bochs-2.3.7
+$ cd bochs-2.6.11
 $ ./configure --enable-plugins --enable-disasm --enable-gdb-stub 
 
 2. start kernel in bochs
 
 $ cd linux-0.11
-$ tools/bochs/bochs-2.3.7/bochs -q -f tools/bochs/bochsrc/bochrc-hd.bxrc
+$ tools/bochs/bochs-2.6.11/bochs -q -f tools/bochs/bochsrc/bochrc-hd.bxrc
 
 or 
 

@@ -151,13 +151,13 @@ bochs-debug:
 
 bochs:
 ifeq ($(BOCHS),)
-	@(cd tools/bochs/bochs-2.3.7; \
+	@(cd tools/bochs/bochs-2.6.11; \
 	./configure --enable-plugins --enable-disasm --enable-gdb-stub;\
 	make)
 endif
 
 bochs-clean:
-	@make clean -C tools/bochs/bochs-2.3.7
+	@make clean -C tools/bochs/bochs-2.6.11
 
 calltree:
 ifeq ($(CALLTREE),)
