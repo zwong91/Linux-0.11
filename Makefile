@@ -2,6 +2,7 @@ OS = Ubuntu20.4
 
 # indicate the Hardware Image file
 HDA_IMG = hdc-0.11.img
+IMAGE = Image
 
 # indicate the path of the calltree
 CALLTREE=$(shell find tools/ -name "calltree" -perm 755 -type f)
@@ -9,7 +10,8 @@ CALLTREE=$(shell find tools/ -name "calltree" -perm 755 -type f)
 # indicate the path of the bochs
 #BOCHS=$(shell find tools/ -name "bochs" -perm 755 -type f)
 BOCHS=bochs
-
+#BOCHSG=bochs-gdb
+BOCHSG=bochs
 #
 # if you want the ram-disk device, define this to be the
 # size in blocks.
@@ -146,13 +148,33 @@ debug:
 	@echo $(OS)
 	@qemu-system-x86_64 -m 16M -boot a -fda Image -hda $(HDA_IMG) -s -S
 
-bochs-debug:
-	@$(BOCHS) -q -f tools/bochs/bochsrc/bochsrc-hd-dbg.bxrc	
+bochs: $(IMAGE)
+	$(BOCHS) -q -unlock -f bochsrc
 
-bochs:
+bochsg: $(IMAGE)
+	@$(BOCHSG) -q -unlock -f bochsrc.gdb
+
+.PHONY: bochsgn
+bochsgn: kbochsg $(IMAGE)
+	@$(BOCHSG) -q -unlock -f bochsrcn.gdb 1>/dev/null 2>&1 &
+
+.PHONY: kbochsg
+kbochsg:
+	ps -ef | grep $(BOCHSG) | grep -v grep | awk '{print $$2}' | xargs -r kill -9
+
+bochs-build:
 ifeq ($(BOCHS),)
 	@(cd tools/bochs/bochs-2.6.11; \
-	./configure --enable-plugins --enable-disasm --enable-gdb-stub;\
+	./configure --with-x11 --with-wx --enable-disasm --enable-all-optimizations \
+	--enable-readline --enable-long-phy-address --enable-ltdl-install \
+	--enable-idle-hack --enable-plugins --enable-a20-pin --enable-x86-64 \
+	--enable-cpu-level=6 --enable-large-ramfile --enable-repeat-speedups \
+	--enable-fast-function-calls  --enable-handlers-chaining  --enable-trace-linking\
+	--enable-configurable-msrs --enable-show-ips  --enable-debugger-gui \
+	--enable-iodebug --enable-logging --enable-assert-checks --enable-fpu \
+	--enable-vmx=2 --enable-svm --enable-3dnow --enable-alignment-check  \
+	--enable-monitor-mwait --enable-avx  --enable-evex --enable-x86-debugger \
+	--enable-pci --enable-usb --enable-voodoo -enable-gdb-stub;\
 	make)
 endif
 

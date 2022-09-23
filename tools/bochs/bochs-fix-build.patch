@@ -31,3 +31,18 @@ Index: bochs/gui/gtk_enh_dbg_osdep.cc
 -        gtk_tree_view_column_set_visible(AllCols[i], FALSE);
 +        gtk_tree_view_column_set_visible(AllCols[i++], FALSE);
  }
+
+Index: bochs/gdbstub.cc
+===================================================================
++++ bochs/gdbstub.cc
+@@ -489,6 +489,10 @@ static void debug_loop(void)
+         {
+           write_signal(&buf[1], SIGTRAP);
+         }
++        else if (last_stop_reason == GDBSTUB_STOP_NO_REASON)
++        {
++          write_signal(&buf[1], 31);
++        }
+         else
+         {
+           write_signal(&buf[1], 0);

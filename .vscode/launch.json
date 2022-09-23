@@ -2,7 +2,78 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "(gdb) Linux-0.11",
+            "name": "(gdb) kernel bochs-nogui",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/tools/system",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "miDebuggerPath": "/usr/bin/gdb",
+            "miDebuggerServerAddress": "localhost:1234",
+            "setupCommands": [{
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                },
+                {
+                    "description": "ignore SIGUSR2 signal",
+                    "text": "handle SIGUSR2 nostop noprint nopass"
+                },
+                { 
+                    "text": "set arch i386:x86-64", 
+                    "description": "run target", 
+                    "ignoreFailures": false 
+                },
+                {
+                    "description":  "将反汇编风格设置为 Intel",
+                    "text": "-gdb-set disassembly-flavor intel",
+                    "ignoreFailures": true
+                }
+            ],
+            "preLaunchTask": "bochsgn"
+        },
+
+        {
+            "name": "(gdb) kernel bochsg",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/tools/system",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "miDebuggerPath": "/usr/bin/gdb",
+            "miDebuggerServerAddress": "localhost:1234",
+            "setupCommands": [{
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                },
+                { 
+                    "text": "set arch i386:x86-64", 
+                    "description": "run target", 
+                    "ignoreFailures": false 
+                },
+                {
+                    "description": "ignore SIGUSR2 signal",
+                    "text": "handle SIGUSR2 nostop noprint nopass"
+                },
+                {
+                    "description":  "将反汇编风格设置为 Intel",
+                    "text": "-gdb-set disassembly-flavor intel",
+                    "ignoreFailures": true
+                }
+            ],
+        },
+
+        {
+            "name": "(gdb) Kernel qemu",
             "type": "cppdbg",
             "request": "launch",
             "program": "${workspaceFolder}/tools/system",

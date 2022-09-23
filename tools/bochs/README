@@ -1,12 +1,12 @@
 0. download bochs 2.6
 
-search it in https://zhuanlan.zhihu.com/p/466399365 and download it here, and then decompress
-it.
+search it in https://zhuanlan.zhihu.com/p/466399365 and https://zhuanlan.zhihu.com/p/492780020, and download here then decompress it.
 
 1. compile me with gdbstub support:
 
 $ cd bochs-2.6.11
-$ ./configure --enable-plugins --enable-disasm --enable-gdb-stub 
+$ ./configure --with-x11 --with-wx --enable-disasm --enable-all-optimizations --enable-readline --enable-long-phy-address --enable-ltdl-install --enable-idle-hack --enable-plugins --enable-a20-pin --enable-x86-64 --enable-cpu-level=6 --enable-large-ramfile --enable-repeat-speedups --enable-fast-function-calls  --enable-handlers-chaining  --enable-trace-linking --enable-configurable-msrs --enable-show-ips  --enable-debugger-gui --enable-iodebug --enable-logging --enable-assert-checks --enable-fpu --enable-vmx=2 --enable-svm --enable-3dnow --enable-alignment-check  --enable-monitor-mwait --enable-avx  --enable-evex --enable-x86-debugger --enable-pci --enable-usb --enable-voodoo -enable-gdb-stub
+
 
 2. start kernel in bochs
 
