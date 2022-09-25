@@ -188,6 +188,7 @@ static char * argv_rc[] = { "/bin/sh", NULL };
 static char * envp_rc[] = { "HOME=/", NULL };
 
 // 读取并执行tty终端交互式用到的命令行参数和运行环境参数
+// argv[0] - 为login shell执行, profile信息
 static char * argv[] = { "-/bin/sh",NULL };
 static char * envp[] = { "HOME=/usr/root", NULL };
 
@@ -204,8 +205,9 @@ void init(void)
 	printf("%d buffers = %d bytes buffer space\n\r",NR_BUFFERS,
 		NR_BUFFERS*BLOCK_SIZE);
 	printf("Free mem: %d bytes\n\r",memory_end-main_memory_start);
+	// fork + execve 模式
 	// 一个以 rc 为标准输入的 shell, 普通文件作为输入读取后shell退出
-	// 以非交互式的方式, 执行/etc/rc文件中的命令如登录, 执行完毕, 进程退出
+	// 以非交互式的方式, 执行/etc/rc文件中的命令如getty->login, 执行完毕, 进程退出
 	if (!(pid=fork())) {
 		close(0);
 		if (open("/etc/rc",O_RDONLY,0))  // 重定向stdin到/etc/rc文件, 非交互式运行执行完rc文件立刻对出
@@ -225,7 +227,7 @@ void init(void)
 		}
 		if (!pid) {
 			close(0);close(1);close(2);		// 新shell关闭遗留的stdin/stdout/stderr
-			setsid();	// 创建新会话, 设置进程组号
+			setsid();	// 创建新会话, 设置进程组号 集合的概念 进程 -> fg/bg进程组 -> 会话控制终端fg 三级
 			// 重新打开tty0作为stdin, 并复制成stdout, stderr
 			(void) open("/dev/tty0",O_RDWR,0);
 			(void) dup(0);
