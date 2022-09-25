@@ -1,5 +1,5 @@
 #
-# Makefile for the FREAX-kernel.
+# Makefile for the LINUX-kernel.
 #
 # Note! Dependencies are done automagically by 'make dep', which also
 # removes any old dependencies. DON'T put your own dependencies here
@@ -8,6 +8,7 @@
 
 include ../Makefile.header
 
+# 选项 '-r' 生成可重定位的输出, 即产生作为连接器ld输入的目标文件
 LDFLAGS	+= -r
 
 # NOTE!: do not try to add -On to CFLAGS with gcc4.x, which will optimize the

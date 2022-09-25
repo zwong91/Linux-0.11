@@ -19,71 +19,91 @@
 #include <asm/segment.h>
 #include <asm/io.h>
 
+// 取段seg中地址addr处的一个字节
+// 参数: seg 段选择符, addr 段内指定的内存地址
+// 输出: $0 - eax(_res), 输入 %1 - eax(esg), %2 -段内地址(*(addr))
 #define get_seg_byte(seg,addr) ({ \
 register char __res; \
 __asm__("push %%fs;mov %%ax,%%fs;movb %%fs:%2,%%al;pop %%fs" \
 	:"=a" (__res):"0" (seg),"m" (*(addr))); \
 __res;})
 
+// 取段seg中地址addr处的4个字节
+// 参数: seg 段选择符, addr 段内指定的内存地址
+// 输出: $0 - eax(_res), 输入 %1 - eax(esg), %2 -段内地址(*(addr))
 #define get_seg_long(seg,addr) ({ \
 register unsigned long __res; \
 __asm__("push %%fs;mov %%ax,%%fs;movl %%fs:%2,%%eax;pop %%fs" \
 	:"=a" (__res):"0" (seg),"m" (*(addr))); \
 __res;})
 
+// 取fs段寄存器的值(选择符)
+// 输出: $0 - eax(__res)
 #define _fs() ({ \
 register unsigned short __res; \
 __asm__("mov %%fs,%%ax":"=a" (__res):); \
 __res;})
 
+// 以下定义了一些函数原型
 int do_exit(long code);
 
-void page_exception(void);
+void page_exception(void);  // page_fault  mm/page.s
 
-void divide_error(void);
+// 定义了一些中断处理函数原型, 用于在trap_init中设置对应的中断描述符
+void divide_error(void);		// kernel/asm.s, 下同
 void debug(void);
 void nmi(void);
 void int3(void);
 void overflow(void);
 void bounds(void);
 void invalid_op(void);
-void device_not_available(void);
+void device_not_available(void);	// kernel/system_call.s
 void double_fault(void);
 void coprocessor_segment_overrun(void);
 void invalid_TSS(void);
 void segment_not_present(void);
 void stack_segment(void);
 void general_protection(void);
-void page_fault(void);
-void coprocessor_error(void);
+void page_fault(void);			// mm/pages.s
+void coprocessor_error(void);	// kernel/system_call.s
 void reserved(void);
-void parallel_interrupt(void);
-void irq13(void);
+void parallel_interrupt(void);	// kernel/system_call.s
+void irq13(void);				// 80387 fpu 中断处理
 
+// 输出异常调试信息堆栈
 static void die(char * str,long esp_ptr,long nr)
 {
 	long * esp = (long *) esp_ptr;
 	int i;
-
+	// 输出出错中断名称, 错误号
 	printk("%s: %04x\n\r",str,nr&0xffff);
+	// 显示当前调用进程的cs:eip, ss:esp的值
+	// esp[1] = 段选择符cs, esp[0] = eip
+	// esp[2] = eflags
+	// esp[4] = 原ss, esp[3] = 原esp
 	printk("EIP:\t%04x:%p\nEFLAGS:\t%p\nESP:\t%04x:%p\n",
 		esp[1],esp[0],esp[2],esp[4],esp[3]);
+	// fs寄存器的值(描述符)
 	printk("fs: %04x\n",_fs());
+	// 段基址和段长度信息
 	printk("base: %p, limit: %p\n",get_base(current->ldt[1]),get_limit(0x17));
+	// 如果堆栈在用户数据段, 输出16字节的堆栈内容
 	if (esp[4] == 0x17) {
 		printk("Stack: ");
 		for (i=0;i<4;i++)
 			printk("%p ",get_seg_long(0x17,i+(long *)esp[3]));
 		printk("\n");
 	}
-	str(i);
+	str(i); // 获取当前运行进程的进程号
 	printk("Pid: %d, process nr: %d\n\r",current->pid,0xffff & i);
+	// 10 字节的指令码
 	for(i=0;i<10;i++)
 		printk("%02x ",0xff & get_seg_byte(esp[1],(i+(char *)esp[0])));
 	printk("\n\r");
 	do_exit(11);		/* play segment exception */
 }
 
+// 以下以do_xx_xx 打头函数是asm.s 中对应的中断处理程序调用的 C 函数
 void do_double_fault(long esp, long error_code)
 {
 	die("double fault",esp,error_code);
@@ -99,6 +119,7 @@ void do_divide_error(long esp, long error_code)
 	die("divide error",esp,error_code);
 }
 
+// 参数为进入中断后被顺序压入栈中的寄存器的值
 void do_int3(long * esp, long error_code,
 		long fs,long es,long ds,
 		long ebp,long esi,long edi,
@@ -106,7 +127,7 @@ void do_int3(long * esp, long error_code,
 {
 	int tr;
 
-	__asm__("str %%ax":"=a" (tr):"0" (0));
+	__asm__("str %%ax":"=a" (tr):"0" (0));	// 取tr寄存器的值
 	printk("eax\t\tebx\t\tecx\t\tedx\n\r%8x\t%8x\t%8x\t%8x\n\r",
 		eax,ebx,ecx,edx);
 	printk("esi\t\tedi\t\tebp\t\tesp\n\r%8x\t%8x\t%8x\t%8x\n\r",
@@ -178,6 +199,9 @@ void do_reserved(long esp, long error_code)
 	die("reserved (15,17-47) error",esp,error_code);
 }
 
+// 异常中断程序初始化, 设置他们的中断向量
+// set_trap_gate和set_system_gate都使用了中断描述符IDT中的 trap gate
+// set_trap_gate设置的特权级为0内核态, set_system_gate设置的特权级为3用户态
 void trap_init(void)
 {
 	int i;
@@ -201,8 +225,8 @@ void trap_init(void)
 	set_trap_gate(16,&coprocessor_error);
 	for (i=17;i<48;i++)
 		set_trap_gate(i,&reserved);
-	set_trap_gate(45,&irq13);
-	outb_p(inb_p(0x21)&0xfb,0x21);
-	outb(inb_p(0xA1)&0xdf,0xA1);
-	set_trap_gate(39,&parallel_interrupt);
+	set_trap_gate(45,&irq13);	// 80387 fpu 0x2d = 45, 允许中断
+	outb_p(inb_p(0x21)&0xfb,0x21);	// 允许8259A 主中断控制芯片IRQ2中断请求
+	outb(inb_p(0xA1)&0xdf,0xA1);	// 允许8259A 从中断控制芯片IRQ13中断请求
+	set_trap_gate(39,&parallel_interrupt);	// 0x27 = 39, 并口中断请求
 }
