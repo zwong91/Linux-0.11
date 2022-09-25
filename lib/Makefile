@@ -67,3 +67,6 @@ wait.s wait.o : wait.c ../include/unistd.h ../include/sys/stat.h \
 write.s write.o : write.c ../include/unistd.h ../include/sys/stat.h \
   ../include/sys/types.h ../include/sys/times.h ../include/sys/utsname.h \
   ../include/utime.h 
+sethostname.s sethostname.o : sethostname.c ../include/unistd.h ../include/sys/stat.h \
+  ../include/sys/types.h ../include/sys/times.h ../include/sys/utsname.h \
+  ../include/utime.h 

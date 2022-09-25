@@ -58,7 +58,7 @@ sa_mask = 4			# 信号屏蔽码
 sa_flags = 8		# 信号集合
 sa_restorer = 12	# 恢复函数指针
 
-nr_system_calls = 74	# 系统调用总数
+nr_system_calls = 75	# 系统调用总数
 
 /*
  * Ok, I get parallel printer interrupts while using the floppy for some

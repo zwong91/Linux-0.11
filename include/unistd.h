@@ -131,6 +131,7 @@
 #define __NR_setregid	71
 #define __NR_iam		72
 #define __NR_whoami		73
+#define __NR_sethostname 74
 
 /*
 // 调用系统中断0x80
@@ -258,4 +259,5 @@ int getppid(void);
 pid_t getpgrp(void);
 pid_t setsid(void);
 
+int set_hostname(char *hostname, int len);
 #endif
