@@ -41,11 +41,11 @@
 
 /* Once again - not implemented, but ... */
 struct flock {
-	short l_type;
-	short l_whence;
-	off_t l_start;
-	off_t l_len;
-	pid_t l_pid;
+	short l_type;		// 文件锁定类型 F_RDLCK/F_WRLCK/F_UNLCK
+	short l_whence;		// 开始偏移处SEEK_SET/SEEK_CUR/SEEK_END
+	off_t l_start;		// 阻塞锁定开始处, 相对偏移字节数
+	off_t l_len;		// 阻塞锁定大小, 如果为0则为文件尾
+	pid_t l_pid;		// 锁定的进程id
 };
 
 extern int creat(const char * filename,mode_t mode);

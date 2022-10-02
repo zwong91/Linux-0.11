@@ -1,6 +1,7 @@
 #ifndef _HEAD_H
 #define _HEAD_H
 
+// 段描述符结构 8字节, 每个描述符表共256项
 typedef struct desc_struct {
 	unsigned long a,b;
 } desc_table[256];
