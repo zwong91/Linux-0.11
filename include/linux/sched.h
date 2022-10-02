@@ -1,8 +1,8 @@
 #ifndef _SCHED_H
 #define _SCHED_H
 
-#define NR_TASKS 64
-#define HZ 100
+#define NR_TASKS 64	// 系统最大进程数量
+#define HZ 100		// 每10ms发出一次时钟中断
 
 #define FIRST_TASK task[0]
 #define LAST_TASK task[NR_TASKS-1]
