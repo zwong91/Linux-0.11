@@ -10,30 +10,37 @@
  * call functions (type getpid(), which just extracts a field from
  * current-task
  */
+// 下面定义了调度程序头文件, 定义了任务结构task_struct, 第一个初始任务0的代码和数据
+// 还有以宏的形式定义有关描述符参数设置和获取的嵌入汇编函数
 #include <linux/sched.h>
-#include <linux/kernel.h>
-#include <linux/sys.h>
-#include <linux/fdreg.h>
-#include <asm/system.h>
-#include <asm/io.h>
-#include <asm/segment.h>
+#include <linux/kernel.h>	// 内核头文件，含有一些内核常用函数原型定义
+#include <linux/sys.h>		// 系统调用头文件, 含有74个系统调用C函数处理, 以'_sys'打头
+#include <linux/fdreg.h>	// 软驱控制头文件
+#include <asm/system.h>		// 系统头文件， 定义了设置或修改描述符/中断gate等嵌入汇编
+#include <asm/io.h>			// io 头文件, 定义了外设输入输出宏嵌入汇编
+#include <asm/segment.h>	// 有关段操作寄存器嵌入汇编
 
-#include <signal.h>
+#include <signal.h>			// 信号头文件, 定义信号常量, sigaction结构, 函数原型
 
+// 信号编号1-32, 比如信号5的位图数值 = 1 << (5 - 1) = 16 = 00010000b
 #define _S(nr) (1<<((nr)-1))
+// 除了SIGKILL和SIGSTOP以外, 其他信号都是可阻塞block的, 1011_1111_1110_1111_1111b
 #define _BLOCKABLE (~(_S(SIGKILL) | _S(SIGSTOP)))
 
+// 内核调试函数, 显示任务号nr的进程号,进程状态, 内核堆栈大约空闲字节数
 void show_task(int nr,struct task_struct * p)
 {
 	int i,j = 4096-sizeof(struct task_struct);
 
 	printk("%d: pid=%d, state=%d, ",nr,p->pid,p->state);
 	i=0;
+	// 检测指定任务数据结构后为0的字节数
 	while (i<j && !((char *)(p+1))[i])
 		i++;
 	printk("%d (of %d) chars free in kernel stack\n\r",i,j);
 }
 
+// 显示所有任务的任务号, 进程号，进程状态, 内核堆栈大约空闲字节数
 void show_stat(void)
 {
 	int i;
@@ -42,30 +49,39 @@ void show_stat(void)
 		if (task[i])
 			show_task(i,task[i]);
 }
-
+// 8253定时芯片频率振荡初值 =  1.193180MHZ / 100HZ, 定时器发出中断频率为100HZ
 #define LATCH (1193180/HZ)
 
-extern void mem_use(void);
+extern void mem_use(void);	// 没有定义和使用
 
-extern int timer_interrupt(void);
-extern int system_call(void);
+extern int timer_interrupt(void);	// 时钟中断处理函数 kernel/system_call.S
+extern int system_call(void);		// 系统调用中断处理函数 kernel/system_call.S
 
+// 每个任务(进程)在内核态运行时都有自己的内核态堆栈, 这里定义了内核态堆栈结构
+// 定义任务联合结构, 一个任务的数据结构和其内核态堆栈在同一内存页中, 从堆栈段寄存器ss获取其数据段描述符
 union task_union {
 	struct task_struct task;
 	char stack[PAGE_SIZE];
 };
 
+// 定义初始任务0的数据和代码
 static union task_union init_task = {INIT_TASK,};
 
+//volatile可见性，有序性 volatile的内存语义确保共享变量得到一致和可靠的更新，可以通过锁，也可以通过更轻量的 volatile 关键字，
+//volatile保证线程间可见性和禁止指令重排序
+//1. 线程 1 将新值写入缓存后，立刻刷新到内存中。
+//2. 这个写入内存的操作，使线程 2 的缓存无效。若想读取该共享变量，则需要重新从内存中获取
 long volatile jiffies=0;
-long startup_time=0;
-struct task_struct *current = &(init_task.task);
-struct task_struct *last_task_used_math = NULL;
+long startup_time=0;	// 开机时间, 从1970-1-1以来的秒数
+struct task_struct *current = &(init_task.task); // 当前任务指针, 初始执行了任务0
+struct task_struct *last_task_used_math = NULL;	//使用过387 fpu的任务指针
 
-struct task_struct * task[NR_TASKS] = {&(init_task.task), };
+struct task_struct * task[NR_TASKS] = {&(init_task.task), };	//定义任务指针数组
 
+// 定义用户态堆栈, 总共1K项, 4K字节, init/main初始化过程中当作内核栈head.s。初始化完成后作为任务0的用户态堆栈
+// 即 运行任务0前时内核栈, 之后作为任务0idle和任务1 init的用户态栈
 long user_stack [ PAGE_SIZE>>2 ] ;
-
+// 设置ss:esp(数据段选择符, 指针)堆栈指针, ss为内核数据段选择符0x10, esp指针指向user_stack最后一项的尾部, 栈从高到底保存栈数据
 struct {
 	long * a;
 	short b;
@@ -74,6 +90,7 @@ struct {
  *  'math_state_restore()' saves the current math information in the
  * old math state array, and gets the new ones from the current task
  */
+// 387 fpu 上下文切换和保存恢复
 void math_state_restore()
 {
 	if (last_task_used_math == current)
@@ -180,7 +197,7 @@ repeat:	current->state = TASK_INTERRUPTIBLE;
 		(**p).state=0;
 		goto repeat;
 	}
-	*p=NULL;
+	*p=tmp;
 	if (tmp)
 		tmp->state=0;
 }
@@ -189,7 +206,6 @@ void wake_up(struct task_struct **p)
 {
 	if (p && *p) {
 		(**p).state=0;
-		*p=NULL;
 	}
 }
 
@@ -287,15 +303,18 @@ void add_timer(long jiffies, void (*fn)(void))
 		p->fn = fn;
 		p->jiffies = jiffies;
 		p->next = next_timer;
-		next_timer = p;
+		next_timer = p; // 插入定时器链表头部
+		// 定时器链表项从小到大排序, 只要判断前面的是否到期
 		while (p->next && p->next->jiffies < p->jiffies) {
 			p->jiffies -= p->next->jiffies;
 			fn = p->fn;
 			p->fn = p->next->fn;
 			p->next->fn = fn;
+
 			jiffies = p->jiffies;
 			p->jiffies = p->next->jiffies;
 			p->next->jiffies = jiffies;
+
 			p = p->next;
 		}
 	}
@@ -389,8 +408,10 @@ void sched_init(void)
 
 	if (sizeof(struct sigaction) != 16)
 		panic("Struct sigaction MUST be 16 bytes");
+	//在全局描述符表中手动初始化进程0的代码段描述符和局部数据段描述符
 	set_tss_desc(gdt+FIRST_TSS_ENTRY,&(init_task.task.tss));
 	set_ldt_desc(gdt+FIRST_LDT_ENTRY,&(init_task.task.ldt));
+	// 剩余252 项置为NULL, i从1开始哦
 	p = gdt+2+FIRST_TSS_ENTRY;
 	for(i=1;i<NR_TASKS;i++) {
 		task[i] = NULL;
@@ -400,12 +421,16 @@ void sched_init(void)
 		p++;
 	}
 /* Clear NT, so that we won't have troubles with that later on */
+// 清除eflags的Nested Task NT 递归调用位, NT 指出TSS中的back_link字段是否有效, 这样当前中断任务iret会任务切换
 	__asm__("pushfl ; andl $0xffffbfff,(%esp) ; popfl");
-	ltr(0);
-	lldt(0);
+	ltr(0);	// 将任务0的TSS段选择符加载到寄存器tr
+	lldt(0);	// 将局部描述符表段选择符加载到ldtr局部描述符表寄存器
+	// 初始化8253/8254定时器, 通道0, 模式3, 二进制计数方式
+	// 向8254写入的控制字0x36=0b00110110, 初始计数值为1193180/100即计数器0每10ms发出方波上升沿信号触发IRQ0
 	outb_p(0x36,0x43);		/* binary, mode 3, LSB/MSB, ch 0 */
 	outb_p(LATCH & 0xff , 0x40);	/* LSB */
 	outb(LATCH >> 8 , 0x40);	/* MSB */
+
 	set_intr_gate(0x20,&timer_interrupt);
 	outb(inb_p(0x21)&~0x01,0x21);
 	set_system_gate(0x80,&system_call);
