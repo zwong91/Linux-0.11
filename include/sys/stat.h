@@ -2,19 +2,19 @@
 #define _SYS_STAT_H
 
 #include <sys/types.h>
-
+// 文件状态结构
 struct stat {
-	dev_t	st_dev;
-	ino_t	st_ino;
-	umode_t	st_mode;
-	nlink_t	st_nlink;
-	uid_t	st_uid;
-	gid_t	st_gid;
-	dev_t	st_rdev;
-	off_t	st_size;
-	time_t	st_atime;
-	time_t	st_mtime;
-	time_t	st_ctime;
+	dev_t	st_dev;		// 文件设备号
+	ino_t	st_ino;		// 文件inode节点号
+	umode_t	st_mode;	// 文件属性, 如下
+	nlink_t	st_nlink;	// 指定文件的链接数
+	uid_t	st_uid;		// 文件用户号
+	gid_t	st_gid;		// 文件组id
+	dev_t	st_rdev;	// 设备号 chr/blk文件
+	off_t	st_size;	// 文件大小/地址
+	time_t	st_atime;	// 最后访问时间
+	time_t	st_mtime;	// 最后修改时间
+	time_t	st_ctime;	// 最后inode修改时间
 };
 
 #define S_IFMT  00170000

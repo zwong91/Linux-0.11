@@ -65,6 +65,7 @@ __asm__("incl %0\n\tandl $4095,%0"::"m" (head))
 
 typedef char buffer_block[BLOCK_SIZE];
 
+// 双向链表缓冲区头
 struct buffer_head {
 	char * b_data;			/* pointer to data block (1024 bytes) */
 	unsigned long b_blocknr;	/* block number */
@@ -80,6 +81,7 @@ struct buffer_head {
 	struct buffer_head * b_next_free;
 };
 
+// 磁盘inode索引, d_inode 7项
 struct d_inode {
 	unsigned short i_mode;
 	unsigned short i_uid;
@@ -87,7 +89,7 @@ struct d_inode {
 	unsigned long i_time;
 	unsigned char i_gid;
 	unsigned char i_nlinks;
-	unsigned short i_zone[9];
+	unsigned short i_zone[9];	// 0-6直接索引, 7间接 8 二级逻辑块
 };
 
 struct m_inode {
@@ -98,7 +100,7 @@ struct m_inode {
 	unsigned char i_gid;
 	unsigned char i_nlinks;
 	unsigned short i_zone[9];
-/* these are in memory also */
+/* these are in memory also 以下字段在内存中*/
 	struct task_struct * i_wait;
 	unsigned long i_atime;
 	unsigned long i_ctime;
@@ -113,25 +115,27 @@ struct m_inode {
 	unsigned char i_update;
 };
 
+// 文件结构, fd和inode关联
 struct file {
-	unsigned short f_mode;
-	unsigned short f_flags;
-	unsigned short f_count;
-	struct m_inode * f_inode;
-	off_t f_pos;
+	unsigned short f_mode;		// 文件操作模式 RW 位
+	unsigned short f_flags;		// 文件打开/控制标记
+	unsigned short f_count;		// 对应文件fd数
+	struct m_inode * f_inode;	// 指向的inode
+	off_t f_pos;				// 文件读写偏移量
 };
 
+// 超级块, d_super_block 磁盘8项
 struct super_block {
-	unsigned short s_ninodes;
-	unsigned short s_nzones;
-	unsigned short s_imap_blocks;
-	unsigned short s_zmap_blocks;
-	unsigned short s_firstdatazone;
-	unsigned short s_log_zone_size;
-	unsigned long s_max_size;
-	unsigned short s_magic;
+	unsigned short s_ninodes;		// 节点数
+	unsigned short s_nzones;		// 逻辑块数
+	unsigned short s_imap_blocks;	// inode位图占用的数据块数
+	unsigned short s_zmap_blocks;	// 逻辑块位图占用的数据块数
+	unsigned short s_firstdatazone;	// 第一个数据逻辑块号
+	unsigned short s_log_zone_size;	// log2为底对数的数据块数/逻辑块
+	unsigned long s_max_size;		// 文件最大长度
+	unsigned short s_magic;			// 文件系统魔数
 /* These are only in memory */
-	struct buffer_head * s_imap[8];
+	struct buffer_head * s_imap[8];	// 占用8块， 表示64M
 	struct buffer_head * s_zmap[8];
 	unsigned short s_dev;
 	struct m_inode * s_isup;
@@ -154,9 +158,10 @@ struct d_super_block {
 	unsigned short s_magic;
 };
 
+// 目录项结构
 struct dir_entry {
-	unsigned short inode;
-	char name[NAME_LEN];
+	unsigned short inode;	// inode节点
+	char name[NAME_LEN];	// 文件名
 };
 
 extern struct m_inode inode_table[NR_INODE];

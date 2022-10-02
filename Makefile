@@ -141,10 +141,10 @@ tags:
 cscope:
 	@cscope -Rbkq
 
-start:
+qemu:
 	@qemu-system-x86_64 -m 16M -boot a -fda Image -hda $(HDA_IMG)
 
-debug:
+qemug:
 	@echo $(OS)
 	@qemu-system-x86_64 -m 16M -boot a -fda Image -hda $(HDA_IMG) -s -S
 

@@ -38,7 +38,7 @@
 #define WIN_FORMAT		0x50
 #define WIN_INIT		0x60
 #define WIN_SEEK 		0x70
-#define WIN_DIAGNOSE		0x90
+#define WIN_DIAGNOSE	0x90
 #define WIN_SPECIFY		0x91
 
 /* Bits for HD_ERROR */
@@ -49,15 +49,16 @@
 #define ECC_ERR		0x40	/* ? */
 #define	BBD_ERR		0x80	/* ? */
 
+// 硬盘分区表结构
 struct partition {
-	unsigned char boot_ind;		/* 0x80 - active (unused) */
-	unsigned char head;		/* ? */
-	unsigned char sector;		/* ? */
-	unsigned char cyl;		/* ? */
-	unsigned char sys_ind;		/* ? */
-	unsigned char end_head;		/* ? */
-	unsigned char end_sector;	/* ? */
-	unsigned char end_cyl;		/* ? */
+	unsigned char boot_ind;		/* 0x80 - active (unused) 0x80表示可引导操作系统*/
+	unsigned char head;		/* 起始磁头号 */
+	unsigned char sector;		/* 起始扇区号0-5位, 起始柱面号6-7位 */
+	unsigned char cyl;		/* 起始柱面号低8位 */
+	unsigned char sys_ind;		/* 0x0b-DOS,0x80-Minix,0x83-Linux */
+	unsigned char end_head;		/* 结束磁头号 */
+	unsigned char end_sector;	/* 结束扇区号0-5位, 结束柱面号6-7位 */
+	unsigned char end_cyl;		/* 结束柱面号低8位 */
 	unsigned int start_sect;	/* starting sector counting from 0 */
 	unsigned int nr_sects;		/* nr of sectors in partition */
 };

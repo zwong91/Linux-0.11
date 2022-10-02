@@ -12,13 +12,13 @@
 #include <termios.h>
 
 #define TTY_BUF_SIZE 1024
-
+// tty 等待队列
 struct tty_queue {
-	unsigned long data;
-	unsigned long head;
-	unsigned long tail;
-	struct task_struct * proc_list;
-	char buf[TTY_BUF_SIZE];
+	unsigned long data;		// 等待队列缓冲区当前数据指针
+	unsigned long head;		// 缓冲区数据头指针
+	unsigned long tail;		// 缓冲区数据尾指针
+	struct task_struct * proc_list;	// 等待进程队列
+	char buf[TTY_BUF_SIZE];		// 队列的缓冲区
 };
 
 #define INC(a) ((a) = ((a)+1) & (TTY_BUF_SIZE-1))
@@ -43,13 +43,13 @@ struct tty_queue {
 #define SUSPEND_CHAR(tty) ((tty)->termios.c_cc[VSUSP])
 
 struct tty_struct {
-	struct termios termios;
-	int pgrp;
+	struct termios termios;		// 终端io属性和控制字符数据结构
+	int pgrp;					// 所属进程组
 	int stopped;
-	void (*write)(struct tty_struct * tty);
-	struct tty_queue read_q;
-	struct tty_queue write_q;
-	struct tty_queue secondary;
+	void (*write)(struct tty_struct * tty);		// write函数指针
+	struct tty_queue read_q;		// 读队列
+	struct tty_queue write_q;		// 写队列
+	struct tty_queue secondary;		// cooked
 	};
 
 extern struct tty_struct tty_table[];

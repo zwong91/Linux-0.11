@@ -46,10 +46,10 @@ typedef unsigned int sigset_t;		/* 32 bits */
 #define SIG_IGN		((void (*)(int))1)	/* ignore signal */
 
 struct sigaction {
-	void (*sa_handler)(int);
-	sigset_t sa_mask;
-	int sa_flags;
-	void (*sa_restorer)(void);
+	void (*sa_handler)(int);	//信号处理函数, SIG_IGN忽略
+	sigset_t sa_mask;			//信号掩码
+	int sa_flags;				// 处理信号集
+	void (*sa_restorer)(void);	// 恢复函数指针,libc库提供用于清理用户栈
 };
 
 void (*signal(int _sig, void (*_func)(int)))(int);

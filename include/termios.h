@@ -33,23 +33,26 @@
 #define TIOCSSOFTCAR	0x541A
 #define TIOCINQ		0x541B
 
+// 终端窗口大小属性
 struct winsize {
-	unsigned short ws_row;
-	unsigned short ws_col;
-	unsigned short ws_xpixel;
-	unsigned short ws_ypixel;
+	unsigned short ws_row;		//窗口字符行数
+	unsigned short ws_col;		//窗口字符列数
+	unsigned short ws_xpixel;	//窗口宽度像素点
+	unsigned short ws_ypixel;	//窗口高度像素点
 };
 
+// AT&T System V termio, 控制字符数据长度8
 #define NCC 8
 struct termio {
 	unsigned short c_iflag;		/* input mode flags */
 	unsigned short c_oflag;		/* output mode flags */
 	unsigned short c_cflag;		/* control mode flags */
 	unsigned short c_lflag;		/* local mode flags */
-	unsigned char c_line;		/* line discipline */
-	unsigned char c_cc[NCC];	/* control characters */
+	unsigned char c_line;		/* line discipline 速率*/
+	unsigned char c_cc[NCC];	/* control characters 控制字符数组 */
 };
 
+// POSIX termios, 控制字符数据长度17
 #define NCCS 17
 struct termios {
 	unsigned long c_iflag;		/* input mode flags */

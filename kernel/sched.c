@@ -394,6 +394,7 @@ int sys_getegid(void)
 	return current->egid;
 }
 
+// 降低对cpu优先使用, 会有人用吗?
 int sys_nice(long increment)
 {
 	if (current->priority-increment>0)

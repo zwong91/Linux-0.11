@@ -50,6 +50,7 @@ struct i387_struct {
 	long	st_space[20];	/* 8*10 bytes for each FP-reg = 80 bytes */
 };
 
+// 任务状态段结构
 struct tss_struct {
 	long	back_link;	/* 16 high bits zero */
 	long	esp0;   //内核态堆栈
@@ -77,6 +78,7 @@ struct tss_struct {
 	struct i387_struct i387;
 };
 
+// 任务(进程)数据结构
 struct task_struct {
 /* these are hardcoded - don't touch */
 	long state;	/* -1 unrunnable, 0 runnable, >0 stopped */ //任务的运行状态 (-1 不可运行, 0 可运行(就绪), >0 已停止)
@@ -93,7 +95,7 @@ struct task_struct {
 	unsigned short gid,egid,sgid; // 组id, 有效组id,保存的组id
 	long alarm;	//报警定时值滴答数
 	long utime,stime,cutime,cstime,start_time;//用户态运行时间滴答数, 内核态运行时间滴答数,子进程用户态运行时间, 子进程内核态运行时间, 进程开始运行时刻
-	unsigned short used_math; // 是否使用math处理标志
+	unsigned short used_math; // 是否使用math 387处理标志
 /* file system info */
 	int tty;		/* -1 if no tty, so it must be signed */ // 进程使用的tty子设备号, -1 表示没有使用
 	unsigned short umask; // 文件创建属性屏蔽位
