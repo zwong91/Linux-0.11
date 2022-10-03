@@ -4,16 +4,17 @@
 #include <sys/types.h>
 
 /* open/fcntl - NOCTTY, NDELAY isn't implemented yet */
-#define O_ACCMODE	00003
-#define O_RDONLY	   00
-#define O_WRONLY	   01
-#define O_RDWR		   02
-#define O_CREAT		00100	/* not fcntl */
-#define O_EXCL		00200	/* not fcntl */
-#define O_NOCTTY	00400	/* not fcntl */
-#define O_TRUNC		01000	/* not fcntl */
-#define O_APPEND	02000
-#define O_NONBLOCK	04000	/* not fcntl */
+#define O_ACCMODE	00003	// 文件访问模式
+#define O_RDONLY	   00	// 只读打开文件
+#define O_WRONLY	   01	// 只写打开文件
+#define O_RDWR		   02	// 读写打开文件
+// 文件创建和操作标志
+#define O_CREAT		00100	/* not fcntl 如果文件不存在就创建*/
+#define O_EXCL		00200	/* not fcntl 独占使用文件标志*/
+#define O_NOCTTY	00400	/* not fcntl 不分配控制终端*/
+#define O_TRUNC		01000	/* not fcntl 若文件已存在且写, 长度截为0*/
+#define O_APPEND	02000	// 追加方式, 文件指针指向尾部
+#define O_NONBLOCK	04000	/* not fcntl 非阻塞方式打开和操作文件*/
 #define O_NDELAY	O_NONBLOCK
 
 /* Defines for fcntl-commands. Note that currently
@@ -35,9 +36,9 @@
 /* Ok, these are locking features, and aren't implemented at any
  * level. POSIX wants them.
  */
-#define F_RDLCK		0
-#define F_WRLCK		1
-#define F_UNLCK		2
+#define F_RDLCK		0	// 共享或读文件锁定
+#define F_WRLCK		1	// 独占或写锁定
+#define F_UNLCK		2	// 文件解锁
 
 /* Once again - not implemented, but ... */
 struct flock {
@@ -48,8 +49,11 @@ struct flock {
 	pid_t l_pid;		// 锁定的进程id
 };
 
+// 创建或重写一个已存在文件
 extern int creat(const char * filename,mode_t mode);
+// 文件fd操作, 会影响打开的文件
 extern int fcntl(int fildes,int cmd, ...);
+// 打开文件在文件和fd关联
 extern int open(const char * filename, int flags, ...);
 
 #endif

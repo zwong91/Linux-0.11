@@ -1,6 +1,8 @@
 #ifndef _STDARG_H
 #define _STDARG_H
 
+// 可变参数类型, 定义一个类型va_list和三个宏va_start, va_arg, va_end, 用于vsprintf/vprintf/vfprintf  unsafe
+
 typedef char *va_list;
 
 /* Amount of space required in an argument list for an arg of type TYPE.

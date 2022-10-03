@@ -5,6 +5,7 @@
 
 /* 0x54 is just a magic number to make these relatively uniqe ('T') */
 
+// 0x54 只是一个魔数, 使这些常数唯一, tty 设备的ioctl调用命令集, ioctl将命令编码在低位字节
 #define TCGETS		0x5401
 #define TCSETS		0x5402
 #define TCSETSW		0x5403
@@ -216,6 +217,7 @@ struct termios {
 
 typedef int speed_t;
 
+// 以下函数在libc.a函数库实现, 内核中没有, 这些函数通过系统调用ioctl实现  fs/ioctl.c
 extern speed_t cfgetispeed(struct termios *termios_p);
 extern speed_t cfgetospeed(struct termios *termios_p);
 extern int cfsetispeed(struct termios *termios_p, speed_t speed);

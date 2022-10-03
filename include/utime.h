@@ -8,6 +8,7 @@ struct utimbuf {
 	time_t modtime;	// 文件修改时间, 从1970-1-1开始的秒数
 };
 
+// 设置文件访问和修改时间
 extern int utime(const char *filename, struct utimbuf *times);
 
 #endif

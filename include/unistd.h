@@ -10,24 +10,24 @@
 /*#define _POSIX_SAVED_IDS */	/* we'll get to this yet */
 /*#define _POSIX_JOB_CONTROL */	/* we aren't there quite yet. Soon hopefully */
 
-#define STDIN_FILENO	0
-#define STDOUT_FILENO	1
-#define STDERR_FILENO	2
+#define STDIN_FILENO	0		// 标准输入fd
+#define STDOUT_FILENO	1		// 标准输出fd
+#define STDERR_FILENO	2		// 标准出错fd
 
 #ifndef NULL
-#define NULL    ((void *)0)
+#define NULL    ((void *)0)		/* 定义空指针 */
 #endif
 
-/* access */
-#define F_OK	0
-#define X_OK	1
-#define W_OK	2
-#define R_OK	4
+/* access 文件访问*/
+#define F_OK	0			// 检查文件是否存在
+#define X_OK	1			// 检查文件是否可执行(搜索)
+#define W_OK	2			// 检查是否可写
+#define R_OK	4			// 检查是否可读
 
-/* lseek */
-#define SEEK_SET	0
-#define SEEK_CUR	1
-#define SEEK_END	2
+/* lseek 文件指针重定位*/
+#define SEEK_SET	0		// 文件读写指针设置为偏移量位置
+#define SEEK_CUR	1		// 文件读写指针设置为当前值 + 偏移量
+#define SEEK_END	2		// 文件读写指针设置为文件长度 + 偏移值
 
 /* _SC stands for System Configuration. We don't use them much */
 #define _SC_ARG_MAX		1
@@ -55,8 +55,10 @@
 #include <sys/utsname.h>
 #include <utime.h>
 
+// 如果程序中定义了__LIBRARY__, 则还包括系统调用号和内嵌汇编syscallxx
 #ifdef __LIBRARY__
 
+// 用作系统调用表的索引值
 #define __NR_setup	0	/* used only by init, to get system going */
 #define __NR_exit	1
 #define __NR_fork	2
@@ -138,6 +140,9 @@
 //"=a" 输出 返回值eax = _res
 //"0"  输入 系统中断号
 */
+
+// 不带参数的系统调用宏函数 type name(void)
+// %0 - eax(_res), %1 - eax(__NR_##name)
 #define _syscall0(type,name) \
   type name(void) \
 { \
@@ -151,6 +156,8 @@ errno = -__res; \
 return -1; \
 }
 
+// 有一个参数的系统调用宏函数 type name(atype a)
+// %0 - eax(_res), %1 - eax(__NR_##name), %2 - ebx(a)
 #define _syscall1(type,name,atype,a) \
 type name(atype a) \
 { \
@@ -164,6 +171,8 @@ errno = -__res; \
 return -1; \
 }
 
+// 有2个参数的系统调用宏函数 type name(atype, a,btype, b)
+// %0 - eax(_res), %1 - eax(__NR_##name), %2 - ebx(a),  %3 - ecx(b)
 #define _syscall2(type,name,atype,a,btype,b) \
 type name(atype a,btype b) \
 { \
@@ -177,6 +186,8 @@ errno = -__res; \
 return -1; \
 }
 
+// 有3个参数的系统调用宏函数 type name(atype, a,btype, b, ctype, c)
+// %0 - eax(_res), %1 - eax(__NR_##name), %2 - ebx(a),  %3 - ecx(b), %4 - edx(c)
 #define _syscall3(type,name,atype,a,btype,b,ctype,c) \
 type name(atype a,btype b,ctype c) \
 { \
@@ -192,8 +203,9 @@ return -1; \
 
 #endif /* __LIBRARY__ */
 
-extern int errno;
+extern int errno;	// 错误码, 全局变量
 
+// 对应各系统调用的函数原型定义 include/linux/sys.h
 int access(const char * filename, mode_t mode);
 int acct(const char * filename);
 int alarm(int sec);
