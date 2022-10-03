@@ -14,9 +14,9 @@
  * 0 - unused (nodev)
  * 1 - /dev/mem
  * 2 - /dev/fd
- * 3 - /dev/hd
+ * 3 - /dev/hd		硬盘设备
  * 4 - /dev/ttyx
- * 5 - /dev/tty
+ * 5 - /dev/tty		tty 终端设备
  * 6 - /dev/lp
  * 7 - unnamed pipes
  */
@@ -30,29 +30,31 @@
 
 void buffer_init(long buffer_end);
 
-#define MAJOR(a) (((unsigned)(a))>>8)
-#define MINOR(a) ((a)&0xff)
+#define MAJOR(a) (((unsigned)(a))>>8)	// 取高字节为主设备号
+#define MINOR(a) ((a)&0xff)				// 取低字节次设备号
 
-#define NAME_LEN 14
-#define ROOT_INO 1
+#define NAME_LEN 14		// minix 名字长度
+#define ROOT_INO 1		// 根 inode
 
-#define I_MAP_SLOTS 8
-#define Z_MAP_SLOTS 8
-#define SUPER_MAGIC 0x137F
+#define I_MAP_SLOTS 8			// inode slots数
+#define Z_MAP_SLOTS 8			// 逻辑块 slots数
+#define SUPER_MAGIC 0x137F		// 文件系统魔数
 
 #define NR_OPEN 20
 #define NR_INODE 32
 #define NR_FILE 64
 #define NR_SUPER 8
-#define NR_HASH 307
-#define NR_BUFFERS nr_buffers
-#define BLOCK_SIZE 1024
+#define NR_HASH 307				// 缓冲区hash表数组项
+#define NR_BUFFERS nr_buffers	// 缓冲区块个数
+#define BLOCK_SIZE 1024			// 1K
 #define BLOCK_SIZE_BITS 10
 #ifndef NULL
 #define NULL ((void *) 0)
 #endif
 
+// 每个逻辑块可存放的inode数
 #define INODES_PER_BLOCK ((BLOCK_SIZE)/(sizeof (struct d_inode)))
+// 每个逻辑块可存放的目录项数
 #define DIR_ENTRIES_PER_BLOCK ((BLOCK_SIZE)/(sizeof (struct dir_entry)))
 
 #define PIPE_HEAD(inode) ((inode).i_zone[0])
@@ -63,9 +65,10 @@ void buffer_init(long buffer_end);
 #define INC_PIPE(head) \
 __asm__("incl %0\n\tandl $4095,%0"::"m" (head))
 
+// 块缓冲区
 typedef char buffer_block[BLOCK_SIZE];
 
-// 双向链表缓冲区头
+// 双向链表缓冲区头bh
 struct buffer_head {
 	char * b_data;			/* pointer to data block (1024 bytes) */
 	unsigned long b_blocknr;	/* block number */
@@ -138,7 +141,7 @@ struct super_block {
 	struct buffer_head * s_imap[8];	// 占用8块， 表示64M
 	struct buffer_head * s_zmap[8];
 	unsigned short s_dev;
-	struct m_inode * s_isup;
+	struct m_inode * s_isup;		// 文件系统根目录inode
 	struct m_inode * s_imount;
 	unsigned long s_time;
 	struct task_struct * s_wait;
@@ -164,44 +167,72 @@ struct dir_entry {
 	char name[NAME_LEN];	// 文件名
 };
 
-extern struct m_inode inode_table[NR_INODE];
-extern struct file file_table[NR_FILE];
-extern struct super_block super_block[NR_SUPER];
-extern struct buffer_head * start_buffer;
-extern int nr_buffers;
+extern struct m_inode inode_table[NR_INODE];// inode数组 32项
+extern struct file file_table[NR_FILE];		// 文件表数组64项
+extern struct super_block super_block[NR_SUPER];	// 超级块数组
+extern struct buffer_head * start_buffer;	// 缓冲区起始内存位置
+extern int nr_buffers;		// 缓存块数
+
 
 extern void check_disk_change(int dev);
 extern int floppy_change(unsigned int nr);
 extern int ticks_to_floppy_on(unsigned int dev);
 extern void floppy_on(unsigned int dev);
 extern void floppy_off(unsigned int dev);
+
+// 文件系统操作管理函数原型
+// 将inode指向的文件截为0
 extern void truncate(struct m_inode * inode);
+// 刷新inode信息
 extern void sync_inodes(void);
+// 等待指定的inode
 extern void wait_on(struct m_inode * inode);
+// 逻辑块位图操作, 取数据块block在设备上对应的逻辑块号
 extern int bmap(struct m_inode * inode,int block);
+// 创建数据块block在设备上对应的逻辑块, 返回block
 extern int create_block(struct m_inode * inode,int block);
+// 获取指定的路径名的inode
 extern struct m_inode * namei(const char * pathname);
+// 根据路径名为打开文件作准备
 extern int open_namei(const char * pathname, int flag, int mode,
 	struct m_inode ** res_inode);
+// 释放一个inode回写入设备
 extern void iput(struct m_inode * inode);
+// 从设备中读取指定设备号的inode
 extern struct m_inode * iget(int dev,int nr);
+// 从inode_table中获取一个空闲的inode
 extern struct m_inode * get_empty_inode(void);
+// 获取一个pipe node
 extern struct m_inode * get_pipe_inode(void);
+// hash表中查找指定数据块, 返回找到的块缓存头指针
 extern struct buffer_head * get_hash_table(int dev, int block);
+// 优先从hash表查找读取设备指定块
 extern struct buffer_head * getblk(int dev, int block);
+// 读写数据块
 extern void ll_rw_block(int rw, struct buffer_head * bh);
+// 释放指定的数据块
 extern void brelse(struct buffer_head * buf);
+// 读取指定的数据块
 extern struct buffer_head * bread(int dev,int block);
+// 读取1页缓冲区到指定地址的内存中
 extern void bread_page(unsigned long addr,int dev,int b[4]);
+// 读取头一个指定的数据库, 并标记后续要读的块
 extern struct buffer_head * breada(int dev,int block,...);
+// 向dev申请一个逻辑块, 返回block
 extern int new_block(int dev);
+// 释放block
 extern void free_block(int dev, int block);
+// 为设备dev创建一个新的inode
 extern struct m_inode * new_inode(int dev);
+// 删除文件时释放一个inode
 extern void free_inode(struct m_inode * inode);
+// 刷新指定设备缓冲区
 extern int sync_dev(int dev);
+// 读取指定设备的超级块
 extern struct super_block * get_super(int dev);
 extern int ROOT_DEV;
 
+// 挂载根文件系统
 extern void mount_root(void);
 
 #endif

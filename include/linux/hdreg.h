@@ -7,6 +7,7 @@
 #define _HDREG_H
 
 /* Hd controller regs. Ref: IBM AT Bios-listing */
+// 硬盘控制器寄存器端口
 #define HD_DATA		0x1f0	/* _CTL when writing */
 #define HD_ERROR	0x1f1	/* see err-bits */
 #define HD_NSECTOR	0x1f2	/* nr of sectors to read/write */
@@ -18,7 +19,7 @@
 #define HD_PRECOMP HD_ERROR	/* same io address, read=error, write=precomp */
 #define HD_COMMAND HD_STATUS	/* same io address, read=status, write=cmd */
 
-#define HD_CMD		0x3f6
+#define HD_CMD		0x3f6	// 控制寄存器端口
 
 /* Bits of HD_STATUS */
 #define ERR_STAT	0x01
@@ -42,25 +43,25 @@
 #define WIN_SPECIFY		0x91
 
 /* Bits for HD_ERROR */
-#define MARK_ERR	0x01	/* Bad address mark ? */
+#define MARK_ERR	0x01	/* Bad address mark */
 #define TRK0_ERR	0x02	/* couldn't find track 0 */
-#define ABRT_ERR	0x04	/* ? */
-#define ID_ERR		0x10	/* ? */
-#define ECC_ERR		0x40	/* ? */
-#define	BBD_ERR		0x80	/* ? */
+#define ABRT_ERR	0x04	/* abort */
+#define ID_ERR		0x10	/* ID not found */
+#define ECC_ERR		0x40	/* ECC */
+#define	BBD_ERR		0x80	/* 坏扇区 */
 
-// 硬盘分区表结构
+// 硬盘分区表结构 16字节, 存放在硬盘的0柱面0磁头1扇区的0x1BE-0x1FD
 struct partition {
-	unsigned char boot_ind;		/* 0x80 - active (unused) 0x80表示可引导操作系统*/
-	unsigned char head;		/* 起始磁头号 */
-	unsigned char sector;		/* 起始扇区号0-5位, 起始柱面号6-7位 */
-	unsigned char cyl;		/* 起始柱面号低8位 */
-	unsigned char sys_ind;		/* 0x0b-DOS,0x80-Minix,0x83-Linux */
-	unsigned char end_head;		/* 结束磁头号 */
-	unsigned char end_sector;	/* 结束扇区号0-5位, 结束柱面号6-7位 */
-	unsigned char end_cyl;		/* 结束柱面号低8位 */
-	unsigned int start_sect;	/* starting sector counting from 0 */
-	unsigned int nr_sects;		/* nr of sectors in partition */
+	unsigned char boot_ind;		/*0x00 0x80 - active (unused) 0x80表示可引导操作系统*/
+	unsigned char head;			/*0x01 起始磁头号 */
+	unsigned char sector;		/*0x02 起始扇区号0-5位, 起始柱面号6-7位 */
+	unsigned char cyl;			/*0x03 起始柱面号低8位 */
+	unsigned char sys_ind;		/*0x04 0x0b-DOS,0x80-Minix,0x83-Linux */
+	unsigned char end_head;		/*0x05 结束磁头号 */
+	unsigned char end_sector;	/*0x06 结束扇区号0-5位, 结束柱面号6-7位 */
+	unsigned char end_cyl;		/*0x07 结束柱面号低8位 */
+	unsigned int start_sect;	/*0x08-0x0b starting sector counting from 0 */
+	unsigned int nr_sects;		/*0x0c-0x0f nr of sectors in partition */
 };
 
 #endif

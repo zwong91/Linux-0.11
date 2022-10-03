@@ -13,7 +13,7 @@
  * KBD_GR for German keyboards
  * KBD_FR for Frech keyboard
  */
-#define KBD_US
+#define KBD_US      // 定义键盘语言类型
 /*#define KBD_GR */
 /*#define KBD_FR */
 /*#define KBD_FINNISH */
