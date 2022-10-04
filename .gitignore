@@ -10,3 +10,4 @@ setup
 system
 Image
 System.map
+kernel/chr_drv/keyboard.s
