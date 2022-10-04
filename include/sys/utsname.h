@@ -3,7 +3,7 @@
 
 #include <sys/types.h>
 
-// 系统名称
+// Unix Timesharing System name, POSIX 标准要求字符数组不指定长度, 这里 9 不符合标准
 struct utsname {
 	char sysname[9];		// 当前操作系统名称
 	char nodename[9];		// 在网络中node节点名称

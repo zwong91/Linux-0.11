@@ -17,15 +17,17 @@ struct stat {
 	time_t	st_ctime;	// 最后inode修改时间
 };
 
+// 定义st_mode值的常量, 八进制表示, S -State, I -Inode, F - File, M - Mask, T - Type
 #define S_IFMT  00170000
-#define S_IFREG  0100000
-#define S_IFBLK  0060000
-#define S_IFDIR  0040000
-#define S_IFCHR  0020000
-#define S_IFIFO  0010000
-#define S_ISUID  0004000
-#define S_ISGID  0002000
-#define S_ISVTX  0001000
+#define S_IFREG  0100000	// Regular 常规文件
+#define S_IFBLK  0060000	// 块设备文件 如/dev/sda
+#define S_IFDIR  0040000	// 目录文件
+#define S_IFCHR  0020000	// 字符设备文件
+#define S_IFIFO  0010000	// FIFO文件
+
+#define S_ISUID  0004000	// 执行文件时设置用户ID
+#define S_ISGID  0002000	// 指针文件时设置组ID
+#define S_ISVTX  0001000	// 针对目录, 限制删除标识
 
 #define S_ISREG(m)	(((m) & S_IFMT) == S_IFREG)
 #define S_ISDIR(m)	(((m) & S_IFMT) == S_IFDIR)
@@ -33,20 +35,20 @@ struct stat {
 #define S_ISBLK(m)	(((m) & S_IFMT) == S_IFBLK)
 #define S_ISFIFO(m)	(((m) & S_IFMT) == S_IFIFO)
 
-#define S_IRWXU 00700
-#define S_IRUSR 00400
-#define S_IWUSR 00200
-#define S_IXUSR 00100
+#define S_IRWXU 00700 	//User- RWX
+#define S_IRUSR 00400	//User- R
+#define S_IWUSR 00200	//User- W
+#define S_IXUSR 00100	//User- X
 
-#define S_IRWXG 00070
-#define S_IRGRP 00040
-#define S_IWGRP 00020
-#define S_IXGRP 00010
+#define S_IRWXG 00070	// Group member - RWX
+#define S_IRGRP 00040	// Group member - R
+#define S_IWGRP 00020	// Group member - W
+#define S_IXGRP 00010	// Group member - X
 
-#define S_IRWXO 00007
-#define S_IROTH 00004
-#define S_IWOTH 00002
-#define S_IXOTH 00001
+#define S_IRWXO 00007	// Other - RWX
+#define S_IROTH 00004	// Other - R
+#define S_IWOTH 00002	// Other - W
+#define S_IXOTH 00001	// Other - X
 
 extern int chmod(const char *_path, mode_t mode);
 extern int fstat(int fildes, struct stat *stat_buf);
