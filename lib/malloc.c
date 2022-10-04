@@ -49,17 +49,19 @@
 #include <linux/mm.h>
 #include <asm/system.h>
 
+// kmalloc/kfree 内核通用内存块分配
+// bucket 桶原理, 建立一页的空闲链表
 struct bucket_desc {	/* 16 bytes */
-	void			*page;
-	struct bucket_desc	*next;
-	void			*freeptr;
-	unsigned short		refcnt;
-	unsigned short		bucket_size;
+	void			*page;			// 该桶描述符对应的内存页指针
+	struct bucket_desc	*next;		// 下一个桶描述符指针
+	void			*freeptr;		// 指向该桶的空闲内存地址指针
+	unsigned short		refcnt;		// 引用计数
+	unsigned short		bucket_size;	// 该桶描述符的大小
 };
 
 struct _bucket_dir {	/* 8 bytes */
-	int			size;
-	struct bucket_desc	*chain;
+	int			size;			// 桶的大小
+	struct bucket_desc	*chain;	// 链表指针
 };
 
 /*
@@ -75,15 +77,15 @@ struct _bucket_dir {	/* 8 bytes */
  * Note that this list *must* be kept in order.
  */
 struct _bucket_dir bucket_dir[] = {
-	{ 16,	(struct bucket_desc *) 0},
-	{ 32,	(struct bucket_desc *) 0},
-	{ 64,	(struct bucket_desc *) 0},
-	{ 128,	(struct bucket_desc *) 0},
-	{ 256,	(struct bucket_desc *) 0},
+	{ 16,	(struct bucket_desc *) 0},		// 16字节长度的内存块
+	{ 32,	(struct bucket_desc *) 0},		// 32字节长度的内存块
+	{ 64,	(struct bucket_desc *) 0},		// 64字节长度的内存块
+	{ 128,	(struct bucket_desc *) 0},		// 128字节长度的内存块
+	{ 256,	(struct bucket_desc *) 0},		// 256字节长度的内存块
 	{ 512,	(struct bucket_desc *) 0},
 	{ 1024,	(struct bucket_desc *) 0},
 	{ 2048, (struct bucket_desc *) 0},
-	{ 4096, (struct bucket_desc *) 0},
+	{ 4096, (struct bucket_desc *) 0},		// 4KB长度的内存块
 	{ 0,    (struct bucket_desc *) 0}};   /* End of list marker */
 
 /*

@@ -8,6 +8,7 @@
 #error I want gcc!
 #endif
 
+// 声明extern和inlie为空, 再包含string.h, 实现了string.c只包括字符串处理函数代码
 #define extern
 #define inline
 #define static
