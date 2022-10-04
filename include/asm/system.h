@@ -4,15 +4,29 @@
 /**
  * 切换到用户模式运行
 */
+// #define move_to_user_mode() \
+// __asm__ ("movl %%esp,%%eax\n\t" \	// 保存堆栈指针esp到eax中
+// 	"pushl $0x17\n\t" \				// SS 入栈
+// 	"pushl %%eax\n\t" \				// ESP 入栈
+// 	"pushfl\n\t" \					// eflags 入栈
+// 	"pushl $0x0f\n\t" \				// task 0 的代码段选择符cs入栈
+// 	"pushl $1f\n\t" \				// 将foreward 1 下面的标号偏移地址eip入栈
+// 	"iret\n" \						// 中断返回则会跳转到 标号1处
+// 	"1:\tmovl $0x17,%%eax\n\t" \	// 开始执行 任务0, 初始化段寄存器指向当前局部描述符数据段
+// 	"movw %%ax,%%ds\n\t" \
+// 	"movw %%ax,%%es\n\t" \
+// 	"movw %%ax,%%fs\n\t" \
+// 	"movw %%ax,%%gs" \
+// 	:::"ax")
 #define move_to_user_mode() \
-__asm__ ("movl %%esp,%%eax\n\t" \	// 保存堆栈指针esp到eax中
-	"pushl $0x17\n\t" \				// SS 入栈
-	"pushl %%eax\n\t" \				// ESP 入栈
-	"pushfl\n\t" \					// eflags 入栈
-	"pushl $0x0f\n\t" \				// task 0 的代码段选择符cs入栈
-	"pushl $1f\n\t" \				// 将foreward 1 下面的标号偏移地址eip入栈
-	"iret\n" \						// 中断返回则会跳转到 标号1处
-	"1:\tmovl $0x17,%%eax\n\t" \	// 开始执行 任务0, 初始化段寄存器指向当前局部描述符数据段
+__asm__ ("movl %%esp,%%eax\n\t" \
+	"pushl $0x17\n\t" \
+	"pushl %%eax\n\t" \
+	"pushfl\n\t" \
+	"pushl $0x0f\n\t" \
+	"pushl $1f\n\t" \
+	"iret\n" \
+	"1:\tmovl $0x17,%%eax\n\t" \
 	"movw %%ax,%%ds\n\t" \
 	"movw %%ax,%%es\n\t" \
 	"movw %%ax,%%fs\n\t" \
@@ -92,15 +106,27 @@ __asm__ ("movw %%dx,%%ax\n\t" \
  * %5 - 描述符项n的地址 + 6 偏移处
  * %6 - 描述符项n的地址 + 7 偏移处
 */
+// #define _set_tssldt_desc(n,addr,type) \
+// __asm__ ("movw $104,%1\n\t" \		// 将TSS/LDT 长度放入描述符第 0 -1 字节
+// 	"movw %%ax,%2\n\t" \			// 将基址低字放入描述符第 2 -3 字节
+// 	"rorl $16,%%eax\n\t" \			// 将基址高字右循环移入ax中,低字则进入高字处
+// 	"movb %%al,%3\n\t" \			// 将基址高字中低字节放入描述符底4个字节
+// 	"movb $" type ",%4\n\t" \		// 将标志类型字节放入描述符第5个字节
+// 	"movb $0x00,%5\n\t" \			// 将描述符第6个字节置0
+// 	"movb %%ah,%6\n\t" \			// 将基址高字中高字节放入描述符第7个字节
+// 	"rorl $16,%%eax" \				// 再右循环16bit, eax恢复原值
+// 	::"a" (addr), "m" (*(n)), "m" (*(n+2)), "m" (*(n+4)), \
+// 	 "m" (*(n+5)), "m" (*(n+6)), "m" (*(n+7)) \
+// 	)
 #define _set_tssldt_desc(n,addr,type) \
-__asm__ ("movw $104,%1\n\t" \		// 将TSS/LDT 长度放入描述符第 0 -1 字节
-	"movw %%ax,%2\n\t" \			// 将基址低字放入描述符第 2 -3 字节
-	"rorl $16,%%eax\n\t" \			// 将基址高字右循环移入ax中,低字则进入高字处
-	"movb %%al,%3\n\t" \			// 将基址高字中低字节放入描述符底4个字节
-	"movb $" type ",%4\n\t" \		// 将标志类型字节放入描述符第5个字节
-	"movb $0x00,%5\n\t" \			// 将描述符第6个字节置0
-	"movb %%ah,%6\n\t" \			// 将基址高字中高字节放入描述符第7个字节
-	"rorl $16,%%eax" \				// 再右循环16bit, eax恢复原值
+__asm__ ("movw $104,%1\n\t" \
+	"movw %%ax,%2\n\t" \
+	"rorl $16,%%eax\n\t" \
+	"movb %%al,%3\n\t" \
+	"movb $" type ",%4\n\t" \
+	"movb $0x00,%5\n\t" \
+	"movb %%ah,%6\n\t" \
+	"rorl $16,%%eax" \
 	::"a" (addr), "m" (*(n)), "m" (*(n+2)), "m" (*(n+4)), \
 	 "m" (*(n+5)), "m" (*(n+6)), "m" (*(n+7)) \
 	)

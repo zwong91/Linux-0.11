@@ -180,10 +180,15 @@ extern void wake_up(struct task_struct ** p);
 #define lldt(n) __asm__("lldt %%ax"::"a" (_LDT(n)))
 
 // 取当前运行任务的数组索引,任务号
+/*
+* tr寄存器中tss选择符复制到ax
+* eax = eax - FIRST_TSS_ENTRY * 8
+* eax = eax / 16 = 当前任务号
+*/
 #define str(n) \
-__asm__("str %%ax\n\t" \	// tr寄存器中tss选择符复制到ax
-	"subl %2,%%eax\n\t" \	// eax = eax - FIRST_TSS_ENTRY * 8
-	"shrl $4,%%eax" \		// eax = eax / 16 = 当前任务号
+__asm__("str %%ax\n\t" \
+	"subl %2,%%eax\n\t" \
+	"shrl $4,%%eax" \
 	:"=a" (n) \
 	:"a" (0),"i" (FIRST_TSS_ENTRY<<3))
 /*
@@ -201,16 +206,31 @@ __asm__("str %%ax\n\t" \	// tr寄存器中tss选择符复制到ax
  * %2 - dx 新任务n的TSS选择符
  * %3 - ecx 新任务n的task[n]
 */
+// #define switch_to(n) {\
+// struct {long a,b;} __tmp; \
+// __asm__("cmpl %%ecx,current\n\t" \		//任务n 就是当前任务, 啥也不干,跳到1 标号退出
+// 	"je 1f\n\t" \
+// 	"movw %%dx,%1\n\t" \				// 将新任务的16位选择符放入__tmp.b
+// 	"xchgl %%ecx,current\n\t" \			// current = task[n], ecx = 被切换的原任务
+// 	"ljmp *%0\n\t" \					// 长跳转到*&__tmp, 造成任务切换
+// 	"cmpl %%ecx,last_task_used_math\n\t" \		// 任务切换回来后, 原任务ecx上次使用过387 fpu吗
+// 	"jne 1f\n\t" \								// 没有则跳到1标号退出
+// 	"clts\n" \							// 原任务上次使用过387 fpu, 清除cr0中的任务切换
+// 	"1:" \
+// 	::"m" (*&__tmp.a),"m" (*&__tmp.b), \
+// 	"d" (_TSS(n)),"c" ((long) task[n])); \
+// }
+
 #define switch_to(n) {\
 struct {long a,b;} __tmp; \
-__asm__("cmpl %%ecx,current\n\t" \		// 任务n 就是当前任务, 啥也不干,跳到1 标号退出
+__asm__("cmpl %%ecx,current\n\t" \
 	"je 1f\n\t" \
-	"movw %%dx,%1\n\t" \				// 将新任务的16位选择符放入__tmp.b
-	"xchgl %%ecx,current\n\t" \			// current = task[n], ecx = 被切换的原任务
-	"ljmp *%0\n\t" \					// 长跳转到*&__tmp, 造成任务切换
-	"cmpl %%ecx,last_task_used_math\n\t" \		// 任务切换回来后, 原任务ecx上次使用过387 fpu吗
-	"jne 1f\n\t" \								// 没有则跳到1标号退出
-	"clts\n" \							// 原任务上次使用过387 fpu, 清除cr0中的任务切换
+	"movw %%dx,%1\n\t" \
+	"xchgl %%ecx,current\n\t" \
+	"ljmp *%0\n\t" \
+	"cmpl %%ecx,last_task_used_math\n\t" \
+	"jne 1f\n\t" \
+	"clts\n" \
 	"1:" \
 	::"m" (*&__tmp.a),"m" (*&__tmp.b), \
 	"d" (_TSS(n)),"c" ((long) task[n])); \
@@ -226,33 +246,59 @@ __asm__("cmpl %%ecx,current\n\t" \		// 任务n 就是当前任务, 啥也不干,
  * %2 - addr地址偏移 7
  * %3 - edx = base基址
 */
+// #define _set_base(addr,base)  \
+// __asm__ ("push %%edx\n\t" \
+// 	"movw %%dx,%0\n\t" \					// base基址低16位, 0-15 = [addr + 2]
+// 	"rorl $16,%%edx\n\t" \					// edx中基址高16位 16-31 = dx
+// 	"movb %%dl,%1\n\t" \					// 基址高16位中的低8位 16-23 = [addr + 4]
+// 	"movb %%dh,%2\n\t" \					// 基址高16位中的高8位 24-31 = [addr + 7]
+// 	"pop %%edx" \
+// 	::"m" (*((addr)+2)), \
+// 	 "m" (*((addr)+4)), \
+// 	 "m" (*((addr)+7)), \
+// 	 "d" (base) \
+// 	)
+
 #define _set_base(addr,base)  \
 __asm__ ("push %%edx\n\t" \
-	"movw %%dx,%0\n\t" \					// base基址低16位, 0-15 = [addr + 2]
-	"rorl $16,%%edx\n\t" \					// edx中基址高16位 16-31 = dx
-	"movb %%dl,%1\n\t" \					// 基址高16位中的低8位 16-23 = [addr + 4]
-	"movb %%dh,%2\n\t" \					// 基址高16位中的高8位 24-31 = [addr + 7]
+	"movw %%dx,%0\n\t" \
+	"rorl $16,%%edx\n\t" \
+	"movb %%dl,%1\n\t" \
+	"movb %%dh,%2\n\t" \
 	"pop %%edx" \
 	::"m" (*((addr)+2)), \
 	 "m" (*((addr)+4)), \
 	 "m" (*((addr)+7)), \
 	 "d" (base) \
 	)
-
 /**
  * @brief 设置addr地址处描述符的limit字段
  * %0 - addr地址
  * %1 - addr地址偏移 6
  * %2 - edx = limit 限长
 */
+// #define _set_limit(addr,limit) \
+// __asm__ ("push %%edx\n\t" \
+// 	"movw %%dx,%0\n\t" \				// 段长linit低16位 = [addr]
+// 	"rorl $16,%%edx\n\t" \				// edx 中段长高4位 = dl
+// 	"movb %1,%%dh\n\t" \				// 取原[addr+6]字节= dh
+// 	"andb $0xf0,%%dh\n\t" \				// 清除dh的低4位
+// 	"orb %%dh,%%dl\n\t" \				// 将原高4位 | 段长高4位合成1字节 = dh
+// 	"movb %%dl,%1\n\t" \				// 放到[addr+6]处
+// 	"pop %%edx" \
+// 	::"m" (*(addr)), \
+// 	 "m" (*((addr)+6)), \
+// 	 "d" (limit) \
+// 	)
+
 #define _set_limit(addr,limit) \
 __asm__ ("push %%edx\n\t" \
-	"movw %%dx,%0\n\t" \				// 段长linit低16位 = [addr]
-	"rorl $16,%%edx\n\t" \				// edx 中段长高4位 = dl
-	"movb %1,%%dh\n\t" \				// 取原[addr+6]字节= dh
-	"andb $0xf0,%%dh\n\t" \				// 清除dh的低4位
-	"orb %%dh,%%dl\n\t" \				// 将原高4位 | 段长高4位合成1字节 = dh
-	"movb %%dl,%1\n\t" \				// 放到[addr+6]处
+	"movw %%dx,%0\n\t" \
+	"rorl $16,%%edx\n\t" \
+	"movb %1,%%dh\n\t" \
+	"andb $0xf0,%%dh\n\t" \
+	"orb %%dh,%%dl\n\t" \
+	"movb %%dl,%1\n\t" \
 	"pop %%edx" \
 	::"m" (*(addr)), \
 	 "m" (*((addr)+6)), \
