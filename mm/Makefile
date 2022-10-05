@@ -1,6 +1,7 @@
 
 include ../Makefile.header
 
+# -r 生成可重定位输出作为ld输入的目标文件
 LDFLAGS += -r
 CFLAGS	+= -I../include
 CPP	+= -I../include

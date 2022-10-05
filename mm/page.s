@@ -11,6 +11,7 @@
 
 .globl page_fault
 
+; 缺页中断和页保护COW处理
 page_fault:
 	xchgl %eax,(%esp)
 	pushl %ecx
