@@ -15,6 +15,7 @@
 /* we use this so that we can do without the ctype library */
 #define is_digit(c)	((c) >= '0' && (c) <= '9')
 
+// 字符串转整数
 static int skip_atoi(const char **s)
 {
 	int i=0;
@@ -32,11 +33,18 @@ static int skip_atoi(const char **s)
 #define SPECIAL	32		/* 0x */
 #define SMALL	64		/* use 'abcdef' instead of 'ABCDEF' */
 
+// 除操作
+// %0 - eax n 商, 返回余数
+// %1 - edx  __res 返回值为余数
+// %2 - n 为被除数
+// %3 - 除数 0
+// %4 - base 为除数
 #define do_div(n,base) ({ \
 int __res; \
 __asm__("divl %4":"=a" (n),"=d" (__res):"0" (n),"1" (0),"r" (base)); \
 __res; })
 
+// 将整数转指定进制的字符串
 static char * number(char * str, int num, int base, int size, int precision
 	,int type)
 {
@@ -91,6 +99,7 @@ static char * number(char * str, int num, int base, int size, int precision
 	return str;
 }
 
+//对va_args参数进行格式化输出到buf, libc库有标准实现, 这里是内核专用, Linux v1.2直接使用libc了
 int vsprintf(char *buf, const char *fmt, va_list args)
 {
 	int len;
@@ -129,7 +138,8 @@ int vsprintf(char *buf, const char *fmt, va_list args)
 		if (is_digit(*fmt))
 			field_width = skip_atoi(&fmt);
 		else if (*fmt == '*') {
-			/* it's the next argument */
+			/* fixed: it's the next argument */
+			++fmt;
 			field_width = va_arg(args, int);
 			if (field_width < 0) {
 				field_width = -field_width;

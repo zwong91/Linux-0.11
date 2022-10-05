@@ -55,7 +55,7 @@ extern int errno;
 #define EDEADLK		35      // 避免资源死锁
 #define ENAMETOOLONG	36  // 文件名太长
 #define ENOLCK		37      // 没有锁可用
-#define ENOSYS		38      // 功能还没有实现
+#define ENOSYS		38      // 当前版本功能还没有实现
 #define ENOTEMPTY	39      // 目录不为空
 
 #endif
