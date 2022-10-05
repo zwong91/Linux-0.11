@@ -230,7 +230,7 @@ int copy_page_tables(unsigned long from,unsigned long to,long size)
 				// 计算页框页面号, 放入bitmap数组中已占用页
 				this_page -= LOW_MEM;
 				this_page >>= 12;
-				mem_map[this_page]++;
+				mem_map[this_page]++; // 引用次数++ >1 Shared 状态
 			}
 		}
 	}
@@ -244,46 +244,64 @@ int copy_page_tables(unsigned long from,unsigned long to,long size)
  * It returns the physical address of the page gotten, 0 if
  * out of memory (either when trying to access page-table or
  * page.)
+ * 
+ * 把一物理内存页面反向映射到线性地址address处
+ * 在相关的页目录项和页表项设置指定的页面, 若成功返回物理页面地址。
+ * 在处理缺页异常do_no_page会调用此函数, 对页表修改时, 并不需要刷新CPU的TLB Transaction Lookaside Buffer, 
+ * 无效的页不会缓存不需要刷新即不用调Invalidate()函数
  */
+// 参数page 分配的physical memory中的某一页面/页帧/页框指针, address 线性地址
 unsigned long put_page(unsigned long page,unsigned long address)
 {
 	unsigned long tmp, *page_table;
 
 /* NOTE !!! This uses the fact that _pg_dir=0 */
-
+	// 检查给定的物理内存页是否有效, physical memory <= 6M, main_memory_start = LOW_MEM
 	if (page < LOW_MEM || page >= HIGH_MEMORY)
 		printk("Trying to put page %p at %p\n",page,address);
+	// 检查page页面是否已申请的页面, bitmap 中是否有置1
 	if (mem_map[(page-LOW_MEM)>>12] != 1)
 		printk("mem_map disagrees with %p at %p\n",page,address);
+	// 计算address在页目录表中对应的目录项指针, 获取二级页表的地址
 	page_table = (unsigned long *) ((address>>20) & 0xffc);
-	if ((*page_table)&1)
+	if ((*page_table)&1) // P = 1, 指定的页表在内存中, 获取页表地址放在page_table
 		page_table = (unsigned long *) (0xfffff000 & *page_table);
 	else {
-		if (!(tmp=get_free_page()))
+		if (!(tmp=get_free_page())) // 申请一空闲页给页表使用
 			return 0;
-		*page_table = tmp|7;
+		*page_table = tmp|7/* 7 - User、U/S, R/W*/;
 		page_table = (unsigned long *) tmp;
 	}
-	page_table[(address>>12) & 0x3ff] = page | 7;
+	// 在页表page_table中设置相关页表项内容, 该页表项在页表中索引 = (address>>12) & 0x3ff 位21 - 位12 的10 bits
+	// 每个页表有 0 - 0x3ff 共1024项
+	page_table[(address>>12) & 0x3ff] = page | 7/*U/S、R/W、P*/;
 /* no need for invalidate */
 	return page;
 }
 
+// 取消页写保护, 用于页异常中断写时复制COW, 内核创建进程时, 新进程和父进程共享同一个设置为Shared 代码和数据内存页
+// 这些内存页均为只读页, 当新进程或父进程需要向内存页面写数据时, CPU触发写页面异常中断
+// 内核首先判断要写的页面是否Shared, 不是Shared则设置页面可写然后退出
+// 若是Shared状态, 重新申请新页并复制旧页面数据,  重置Shared
 void un_wp_page(unsigned long * table_entry)
 {
 	unsigned long old_page,new_page;
-
+	// 获取指定页表项中物理页面地址/页面号
 	old_page = 0xfffff000 & *table_entry;
+	// 原页面地址在physical memory中并且 bitmap 为1仅引用一次,不是Shared状态
+	// 即不是内核进程, 该页面只被一个进程使用, 修改页为可写即可
 	if (old_page >= LOW_MEM && mem_map[MAP_NR(old_page)]==1) {
-		*table_entry |= 2;
+		*table_entry |= 2 /*0b10 R/W位,可写*/;
+		// 页表被修改了刷新到cr3
 		invalidate();
 		return;
 	}
+	// mem_map[] > 1 页面是Shared状态, 在physical memory 申请新的内存页
 	if (!(new_page=get_free_page()))
 		oom();
 	if (old_page >= LOW_MEM)
-		mem_map[MAP_NR(old_page)]--;
-	*table_entry = new_page | 7;
+		mem_map[MAP_NR(old_page)]--; // 引用计数--, 取消Shared状态
+	*table_entry = new_page | 7/*U/S、R/W、P*/;
 	invalidate();
 	copy_page(old_page,new_page);
 }	
@@ -294,15 +312,24 @@ void un_wp_page(unsigned long * table_entry)
  * and decrementing the shared-page counter for the old page.
  *
  * If it's in code space we exit with a segment error.
+ * 只读页面写异常中断处理, 在page.s 中被调用
+ * 参数 error_code CPU写异常中断错误码, address 线性地址
  */
 void do_wp_page(unsigned long error_code,unsigned long address)
 {
 #if 0
 /* we cannot do this yet: the estdio library writes to code space */
 /* stupid, stupid. I really want the libc.a from GNU */
+// 代码空间写操作, 傻逼
 	if (CODE_SPACE(address))
 		do_exit(SIGSEGV);
 #endif
+// 参数为线性地址address指向的页面在页表中的页表项指针
+// 1. 计算页表项在页表中的偏移地址pte_offset = (address >> 12)页表索引值 << 2 & 0b_1111_1111_1100 = (address>>10) & 0xffc
+// 2. 计算页目录项中页表的偏移地址pgd_offset = (address >> 22)页目录索引值 << 2 & 0b_1111_1111_1100 = (address>>20) & 0xffc
+//  page_table = *((unsigned long *)pgd_offset) 取页目标表中表项中对应的页表内容即放着的不就是页表的物理地址
+//  page_table = 0xfffff000 & page_table 4K对齐
+// 3. 页表项指针table_entry = page_table + pte_offset
 	un_wp_page((unsigned long *)
 		(((address>>10) & 0xffc) + (0xfffff000 &
 		*((unsigned long *) ((address>>20) &0xffc)))));
