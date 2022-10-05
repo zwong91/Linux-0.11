@@ -122,7 +122,7 @@ struct m_inode {
 struct file {
 	unsigned short f_mode;		// 文件操作模式 RW 位
 	unsigned short f_flags;		// 文件打开/控制标记
-	unsigned short f_count;		// 对应文件fd数
+	unsigned short f_count;		// 对应文件引用数
 	struct m_inode * f_inode;	// 指向的inode
 	off_t f_pos;				// 文件读写偏移量
 };

@@ -58,20 +58,20 @@ struct i387_struct {
 	long	st_space[20];	/* 8*10 bytes for each FP-reg = 80 bytes */
 };
 
-// 任务状态段结构
+// Task State Segment任务状态段结构, 除387 fpu外, 共104字节
 struct tss_struct {
 	long	back_link;	/* 16 high bits zero */
 	long	esp0;   //内核态堆栈
 	long	ss0;		/* 16 high bits zero */
-	long	esp1;
+	long	esp1;	// ring 1
 	long	ss1;		/* 16 high bits zero */
-	long	esp2;
+	long	esp2;	// ring 2
 	long	ss2;		/* 16 high bits zero */
 	long	cr3;
 	long	eip;
 	long	eflags;
 	long	eax,ecx,edx,ebx;
-	long	esp;
+	long	esp;	// 用户态堆栈ss:esp
 	long	ebp;
 	long	esi;
 	long	edi;
@@ -115,7 +115,7 @@ struct task_struct {
 /* ldt for this task 0 - zero 1 - cs 2 - ds&ss */
 	struct desc_struct ldt[3]; // 进程局部描述符表 0 为空, 1 代码段cs  2 数据段和堆栈段 ds&ss
 /* tss for this task */
-	struct tss_struct tss;  // 进程上下文信息结构, CPU寄存器的值, 进程状态, 堆栈内容构成。
+	struct tss_struct tss;  // 进程上下文信息结构, CPU寄存器的值, 进程状态, 堆栈内容构成, 任务切换CPU自动加载tr。
 };
 
 /*
