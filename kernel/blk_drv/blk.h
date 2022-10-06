@@ -140,7 +140,7 @@ static inline void end_request(int uptodate)
 	CURRENT = CURRENT->next;
 }
 
-// 块设备统一初始化宏
+// 块设备统一初始化检查宏
 #define INIT_REQUEST \
 repeat: \
 	if (!CURRENT) \
