@@ -1,7 +1,7 @@
 /*
  *  linux/kernel/blk_drv/ramdisk.c
  *
- *  Written by Theodore Ts'o, 12/2/91
+ *  Written by Theodore Ts'o, 12/2/91 tsx-11.mit.edu  提出并实现ext2/ext3/ext4 文件系统
  */
 
 #include <string.h>
@@ -14,11 +14,12 @@
 #include <asm/segment.h>
 #include <asm/memory.h>
 
+// 必须在blk.h前定义
 #define MAJOR_NR 1
 #include "blk.h"
 
-char	*rd_start;
-int	rd_length = 0;
+char	*rd_start;  // 4M
+int	rd_length = 0;	// 512KB
 
 void do_rd_request(void)
 {
@@ -55,7 +56,7 @@ long rd_init(long mem_start, int length)
 	char	*cp;
 
 	blk_dev[MAJOR_NR].request_fn = DEVICE_REQUEST;
-	rd_start = (char *) mem_start;
+	rd_start = (char *) mem_start; // 对于16M, 在4M处
 	rd_length = length;
 	cp = rd_start;
 	for (i=0; i < length; i++)
@@ -83,6 +84,7 @@ void rd_load(void)
 		(int) rd_start);
 	if (MAJOR(ROOT_DEV) != 2)
 		return;
+	// 用于读取指定额数据块, 并标出还需要读的块
 	bh = breada(ROOT_DEV,block+1,block,block+2,-1);
 	if (!bh) {
 		printk("Disk error while looking for ramdisk!\n");
@@ -103,7 +105,7 @@ void rd_load(void)
 		nblocks << BLOCK_SIZE_BITS);
 	cp = rd_start;
 	while (nblocks) {
-		if (nblocks > 2) 
+		if (nblocks > 2) // 若读取块数 > 2则采用超前预读
 			bh = breada(ROOT_DEV, block, block+1, block+2, -1);
 		else
 			bh = bread(ROOT_DEV, block);

@@ -18,6 +18,8 @@
  * 3. 处理硬盘当前请求项 do_hd_request
  * 4. 硬盘中断处理过程C参数 read_intr/write_intr/bad_rw_intr/recal_intr
  * 5. 辅助函数 controller_ready/drive_busy/win_result/hd_out/reset_controller
+ * 
+ * DMA Direct Memory Access 外设直接与内存传输数据, 映射内存, 绕过CPU
  */
 
 #include <linux/config.h>
