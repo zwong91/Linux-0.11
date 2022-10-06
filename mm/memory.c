@@ -320,7 +320,7 @@ void do_wp_page(unsigned long error_code,unsigned long address)
 #if 0
 /* we cannot do this yet: the estdio library writes to code space */
 /* stupid, stupid. I really want the libc.a from GNU */
-// 代码空间写操作, 傻逼
+// 代码空间写操作, 代码还能改? CPU手册中隐藏的指令? 傻逼
 	if (CODE_SPACE(address))
 		do_exit(SIGSEGV);
 #endif
@@ -336,19 +336,24 @@ void do_wp_page(unsigned long error_code,unsigned long address)
 
 }
 
+// 若页面不可写, 则复制页面COW 在fork.c/verify_area调用
 void write_verify(unsigned long address)
 {
 	unsigned long page;
-
+	// 获取address的线性地址对应的页目录项, P = 0, 对于不存在的页面没有Shared和COW一说, 并且如果不存在的页写操作,
+	// 会执行do_no_page和put_page, 直接返回就完了
 	if (!( (page = *((unsigned long *) ((address>>20) & 0xffc)) )&1))
 		return;
+	// 页表地址
 	page &= 0xfffff000;
+	// addr的页表项指针 = 页表地址 + 页面在页表中的页表项偏移量 
 	page += ((address>>10) & 0xffc);
-	if ((3 & *(unsigned long *) page) == 1)  /* non-writeable, present */
+	if ((/*0b11 - R/W, P*/3 & *(unsigned long *) page) == 1)  /* 0b01 - non-writeable, present */
 		un_wp_page((unsigned long *) page);
 	return;
 }
 
+// 获取一页空闲内存并反向映射到指定的线性地址address
 void get_empty_page(unsigned long address)
 {
 	unsigned long tmp;
@@ -366,6 +371,12 @@ void get_empty_page(unsigned long address)
  *
  * NOTE! This assumes we have checked that p != current, and that they
  * share the same executable.
+ * 
+ * 试图对当前进程address指向的页面共享, 当前进程由p进程fork产生即他们代码内容一样
+ * 如果未修改数据段内容则数据段内容也是一样
+ * 
+ * 参数address 是进程中代码逻辑地址 0-64M, p被共享页面进程
+ * 如果p进程address指向的页面 Present = 1, 并且没有被修改则让当前进程和p进程共享同一页面, 同时验证指定的地址处之前没有申请过内存页
  */
 static int try_to_share(unsigned long address, struct task_struct * p)
 {
@@ -374,38 +385,44 @@ static int try_to_share(unsigned long address, struct task_struct * p)
 	unsigned long from_page;
 	unsigned long to_page;
 	unsigned long phys_addr;
-
+	// 计算进程空间[0-64M] 逻辑上的页目录项号
 	from_page = to_page = ((address>>20) & 0xffc);
+	// 实际页目录项 = 逻辑上的页目录项号 + p/current 在4G线性地址空间中起始地址对应的页目录项
 	from_page += ((p->start_code>>20) & 0xffc);
 	to_page += ((current->start_code>>20) & 0xffc);
 /* is there a page-directory at from? */
-	from = *(unsigned long *) from_page;
-	if (!(from & 1))
+	from = *(unsigned long *) from_page; // p 进程目录项的内容 (页表的物理地址)
+	if (!(from & 1)) // Present = 0, 目录项对应的二级页表不存在
 		return 0;
-	from &= 0xfffff000;
-	from_page = from + ((address>>10) & 0xffc);
-	phys_addr = *(unsigned long *) from_page;
+	from &= 0xfffff000; // 获取该目录项对应的页表地址
+	// 计算逻辑地址address对应的页表项指针, 表项中的内容临时放在phys_addr
+	from_page = from + ((address>>10) & 0xffc); // 页表项指针
+	phys_addr = *(unsigned long *) from_page;	// 页表项内容
 /* is the page clean and present? */
-	if ((phys_addr & 0x41) != 0x01)
+	if ((phys_addr & 0x41/*0b0100_0001 -Dirty, Present*/) != 0x01)
 		return 0;
-	phys_addr &= 0xfffff000;
+	phys_addr &= 0xfffff000; // 物理页面地址
 	if (phys_addr >= HIGH_MEMORY || phys_addr < LOW_MEM)
 		return 0;
-	to = *(unsigned long *) to_page;
-	if (!(to & 1)) {
+	// 计算当前进程中address对应的页表项地址, 并且 P = 0即该页表项还没有映射物理页
+	to = *(unsigned long *) to_page; // 当前进程目录项内容
+	if (!(to & 1)) {	// P = 0二级页表不存在, 申请一空闲页面存放页面
 		if ((to = get_free_page()))
-			*(unsigned long *) to_page = to | 7;
+			*(unsigned long *) to_page = to | 7/* 7 - User、U/S, R/W*/;
 		else
 			oom();
 	}
-	to &= 0xfffff000;
-	to_page = to + ((address>>10) & 0xffc);
+	to &= 0xfffff000;	// 目录项中页表地址
+	to_page = to + ((address>>10) & 0xffc);	//页表项地址
 	if (1 & *(unsigned long *) to_page)
 		panic("try_to_share: to_page already exists");
 /* share them: write-protect */
-	*(unsigned long *) from_page &= ~2;
+	// 把进程p和当前进程页表项的内容都映射p的address指向的物理内存页
+	*(unsigned long *) from_page &= ~2/*~2=0b01 - R/W置0只读, P=1*/;
 	*(unsigned long *) to_page = *(unsigned long *) from_page;
+	// 刷新页目录页表, 加载到cr3
 	invalidate();
+	// 计算p 页面号, bitmap 位引用计数++ 共享
 	phys_addr -= LOW_MEM;
 	phys_addr >>= 12;
 	mem_map[phys_addr]++;
@@ -419,6 +436,12 @@ static int try_to_share(unsigned long address, struct task_struct * p)
  *
  * We first check if it is at all feasible by checking executable->i_count.
  * It should be >1 if there are other tasks sharing this inode.
+ * 
+ * 发生缺页异常时, 共享页面的前提条件看看当前系统中有运行相同的可执行文件的其他进程
+ * 判断方法是 task_struct -> executable字段, execute->icount > 1   inode 节点信息
+ * 然后遍历任务数组比较executable
+ * 
+ * 参数 address 进程的逻辑地址 [0-64M]即当前进程想要共享p进程页面的逻辑地址
  */
 static int share_page(unsigned long address)
 {
@@ -441,50 +464,69 @@ static int share_page(unsigned long address)
 	return 0;
 }
 
+// 访问不存在的页时执行缺页处理, page.s中调用
+// 首先试图与已加载到内存可执行文件页面共享, 若共享不成功则老实从磁盘文件加载读入所缺的数据到内存
+// 参数 error_code 缺页中断CPU错误码, address 产生异常的页面线性地址
 void do_no_page(unsigned long error_code,unsigned long address)
 {
 	int nr[4];
 	unsigned long tmp;
 	unsigned long page;
 	int block,i;
-
+	// 计算线性地址空间address的页面地址
 	address &= 0xfffff000;
+	// 计算线性地址在进程空间中相对进程的基址 0/640K/64M/128M的偏移量即逻辑地址
 	tmp = address - current->start_code;
+	// executable为运行的进程可执行文件inode, idle0/init1 -> fork后 没有调用过execve的所有进程的executable都为0
+	// tmp 超过了进程的代码+数据长度即表示进程在申请新空闲内存页存放heap/stack数据
 	if (!current->executable || tmp >= current->end_data) {
 		get_empty_page(address);
 		return;
 	}
+	// 试图共享页面
 	if (share_page(tmp))
 		return;
+	// 共享不成功则申请一个空闲物理页
 	if (!(page = get_free_page()))
 		oom();
 /* remember that 1 block is used for header */
-	block = 1 + tmp/BLOCK_SIZE;
+	block = 1 + tmp/BLOCK_SIZE; // 可执行文件中起始数据块号,BLOCK_SIZE对齐
+	// 根据块号和可执行文件inode索引从 buffer_head bitmap找到对应块设备对应逻辑块号 nr[]
 	for (i=0 ; i<4 ; block++,i++)
 		nr[i] = bmap(current->executable,block);
+	// 一次读取四个块即4KB 刚好一页数据到page中
 	bread_page(page,current->executable->i_dev,nr);
+	// 按照4K读取文件, 文件内容不足4K, 计算超出end_data边界的长度内容置0
 	i = tmp + 4096 - current->end_data;
-	tmp = page + 4096;
+	tmp = page + 4096; // tmp 指向page的末端
 	while (i-- > 0) {
 		tmp--;
 		*(char *)tmp = 0;
 	}
+	// 把引起缺页异常的一页物理页面反向映射到线性地址address
 	if (put_page(page,address))
 		return;
 	free_page(page);
 	oom();
 }
 
-void mem_init(long start_mem, long end_mem)
+// 1MB以上的物理内存分为一个一个页面, 使用mem_map管理 bitmap 0 - 空闲, 1 - 占用,  >1 共享
+// 默认16MB 内存机器 = ((16MB - 1MB) / 4KB) = 3840页数
+// start_mem - end_mem = [4M(已去除ramdisk), 16M] 用户空间 = 3072 页数
+// 0 - 1M 内核空间 = 内核0-640KB + 高速缓存buffer_head/page_cache + 显示IO映射内存
+void mem_init(long start_mem/*4MB*/, long end_mem/*16MB*/)
 {
 	int i;
-
+	// 1M - 15M memory bitmap = 100
 	HIGH_MEMORY = end_mem;
 	for (i=0 ; i<PAGING_PAGES ; i++)
 		mem_map[i] = USED;
+	// bitmap 中起始项号索引i, 对应mem_map[0]
 	i = MAP_NR(start_mem);
+	// 计算physical memory 总页面数
 	end_mem -= start_mem;
 	end_mem >>= 12;
+	// mem_map[]中4M - 16M bitmap置为0
 	while (end_mem-->0)
 		mem_map[i++]=0;
 }
@@ -497,11 +539,12 @@ void calc_mem(void)
 	for(i=0 ; i<PAGING_PAGES ; i++)
 		if (!mem_map[i]) free++;
 	printk("%d pages free (of %d)\n\r",free,PAGING_PAGES);
-	for(i=2 ; i<1024 ; i++) {
-		if (1&pg_dir[i]) {
-			pg_tbl=(long *) (0xfffff000 & pg_dir[i]);
+	// 页目录项0-3被内核使用, 从4开始
+	for(i=4 ; i<1024 ; i++) {
+		if (1&pg_dir[i]) {	// 页目录项 P = 1 有效
+			pg_tbl=(long *) (0xfffff000 & pg_dir[i]); // 页表指针
 			for(j=k=0 ; j<1024 ; j++)
-				if (pg_tbl[j]&1)
+				if (pg_tbl[j]&1) // 有效页面
 					k++;
 			printk("Pg-dir[%d] uses %d pages\n",i,k);
 		}
