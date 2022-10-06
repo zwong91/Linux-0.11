@@ -13,6 +13,15 @@ CPP	+= -I../include
 .s.o:
 	$(AS) -o $*.o $<
 
+# MINIX 文件系统
+## 0x0000-0x03ff = 1KB 第0个块引导块内容
+## 0x0400-0x07ff = 1KB 第1个块超级块内容
+## 0x0800-0x0bff = 1KB 第2个块inode索引位图信息
+## 0x0c00-0x0x0ff = 1KB 第3个块 逻辑块位图
+## 0x1000-0x1fff = 4KB 第4-7块inode 节点结构信息
+## 0x2000-0x23ff = 1B 第8个块 1号root inode数据
+## ...开始存块数据
+
 OBJS=	open.o read_write.o inode.o file_table.o buffer.o super.o \
 	block_dev.o char_dev.o file_dev.o stat.o exec.o pipe.o namei.o \
 	bitmap.o fcntl.o ioctl.o truncate.o
