@@ -11,6 +11,13 @@
  * sleep. Special care is recommended.
  * 
  *  modified by Drew Eckhardt to check nr of hd's from the CMOS.
+ * 
+ * 硬盘控制器驱动程序:
+ * 1. 初始化硬盘和设置硬盘用的数据结构函数 如 sys_setup和hd_init
+ * 2. 向硬盘控制器发送命令 hd_out
+ * 3. 处理硬盘当前请求项 do_hd_request
+ * 4. 硬盘中断处理过程C参数 read_intr/write_intr/bad_rw_intr/recal_intr
+ * 5. 辅助函数 controller_ready/drive_busy/win_result/hd_out/reset_controller
  */
 
 #include <linux/config.h>
@@ -68,6 +75,8 @@ extern void hd_interrupt(void);
 extern void rd_load(void);
 
 /* This may be used only once, enforced by 'static int callable' */
+// 利用boot/setup.s提供的信息对系统中硬盘驱动器参数设置, 读取硬盘分区表
+// 尝试把启动引导盘上initrd复制到ramdisk内存中, 加载ramdisk的根文件系统, 否则继续执行普通根文件系统的加载工作
 int sys_setup(void * BIOS)
 {
 	static int callable = 1;
@@ -177,6 +186,7 @@ static int win_result(void)
 	return (1);
 }
 
+// 硬盘控制器操作命令发送
 static void hd_out(unsigned int drive,unsigned int nsect,unsigned int sect,
 		unsigned int head,unsigned int cyl,unsigned int cmd,
 		void (*intr_addr)(void))
@@ -188,6 +198,7 @@ static void hd_out(unsigned int drive,unsigned int nsect,unsigned int sect,
 	if (!controller_ready())
 		panic("HD controller not ready");
 	do_hd = intr_addr;
+	// 向0x1f0 - 0x1f7 端口发送命令
 	outb_p(hd_info[drive].ctl,HD_CMD);
 	port=HD_DATA;
 	outb_p(hd_info[drive].wpcom>>2,++port);
@@ -340,6 +351,7 @@ void do_hd_request(void)
 		panic("unknown hd-command");
 }
 
+// 设置硬盘控制器中断描述符, 打开端口以允许硬盘控制器发送IRQ
 void hd_init(void)
 {
 	blk_dev[MAJOR_NR].request_fn = DEVICE_REQUEST;
