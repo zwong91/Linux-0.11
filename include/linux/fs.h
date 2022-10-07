@@ -70,18 +70,18 @@ typedef char buffer_block[BLOCK_SIZE];
 
 // 双向链表缓冲区头bh
 struct buffer_head {
-	char * b_data;			/* pointer to data block (1024 bytes) */
-	unsigned long b_blocknr;	/* block number */
-	unsigned short b_dev;		/* device (0 = free) */
-	unsigned char b_uptodate;
-	unsigned char b_dirt;		/* 0-clean,1-dirty */
-	unsigned char b_count;		/* users using this block */
-	unsigned char b_lock;		/* 0 - ok, 1 -locked */
-	struct task_struct * b_wait;
-	struct buffer_head * b_prev;
-	struct buffer_head * b_next;
-	struct buffer_head * b_prev_free;
-	struct buffer_head * b_next_free;
+	char * b_data;			/* 指向对应缓冲块数据 pointer to data block (1024 bytes) */
+	unsigned long b_blocknr;	/* 块号 block number */
+	unsigned short b_dev;		/* 使用该缓冲块的设备号, device (0 = free) */
+	unsigned char b_uptodate;	// 数据是否最新或直接可使用
+	unsigned char b_dirt;		/* 是否修改过内容 0-clean,1-dirty */
+	unsigned char b_count;		/* 引用计数 users using this block */
+	unsigned char b_lock;		/* 是否锁定 0 - ok, 1 -locked */
+	struct task_struct * b_wait;	// 等待该缓冲区上的进程队列
+	struct buffer_head * b_prev;	// hash_table 中同一个hash值的拉链法前一个缓冲头
+	struct buffer_head * b_next;	// hash_table 中同一个hash值的拉链法后一个缓冲头
+	struct buffer_head * b_prev_free; // 前一个缓冲头
+	struct buffer_head * b_next_free;// 后一个缓冲头
 };
 
 // 磁盘inode索引, d_inode 7项
